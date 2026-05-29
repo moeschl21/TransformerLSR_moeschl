@@ -10,14 +10,15 @@ import argparse
 import random
 import matplotlib.pyplot as plt
 
-
+# JM Reads command-line arguments centrally and then return them after parsing.
 def readParser():
+    # JM Adding ArgumentParser-object which sepcifies the arguments, what is allowed and default values
     parser = argparse.ArgumentParser(description='synthetic data generation inspired by the DIVAT dataset')
     parser.add_argument('--seed', type=int, default=123, 
                         help='random seed (default: 123)')
-    parser.add_argument('--num_traj', type=int, default=1000, 
+    parser.add_argument('--num_traj', type=int, default=1000, # JM Patients
                         help='number of trajectories')
-    parser.add_argument('--timeout', type=int, default=1000, 
+    parser.add_argument('--timeout', type=int, default=1000,
                         help='environment timeout')
     parser.add_argument('--save', type=str, default='DIVAT_sim',
                     help='data file name')
@@ -28,16 +29,21 @@ def readParser():
 def sigmoid_k(theta_alpha,k):
   return(k/(1+np.exp(theta_alpha)))
 
+# JM "Stepfunction"
 def heavi_side(x,val,loc):
-    return val * (x > loc)
+    return val * (x > loc) # True = 1
 
+# JM Simulations environment: "Patient" with certain states and parameters
 class DIVAT_env:
+    # JM Default parameters/Koefficients like sigma/beta etc.
     def __init__(self, sigma2_l=0.1**2,sigma2_d=0.3**2,beta_s1=1,
                         beta_s2=0.9,beta_s3=0,beta_alpha=0,h0=1,omega=1.25,mean_y_init=5,timeout=1000):
 
-        self.time = 0
+        self.time = 0 # JM current simulation time
         self.steps_elapsed = 0
         self.tox = 0
+
+        # JM Random effects from the normal distribution
         self.b_il = stats.multivariate_normal.rvs(mean=np.array([0,0,0]),
                                                   cov=np.array([0.2**2,0.07**2,1*10**(-8)]), size=1)
 
@@ -45,25 +51,32 @@ class DIVAT_env:
         self.b_il_tl = stats.multivariate_normal.rvs(mean=np.array([0,0,0]),
                                                   cov=np.array([0.2**2,0.07**2,1*10**(-8)]), size=1)
 
+        # JM Baseline Kovariates
         self.DGF = stats.binom.rvs(n=1, p=0.4, size=1)[0]
         self.ageD = stats.norm.rvs(loc=0, scale=1, size=1)[0]
         self.BMI = stats.norm.rvs(loc=0, scale=1, size=1)[0]
         self.sigma2_l = sigma2_l
         self.sigma2_d = sigma2_d
 
+        # JM Initialization of the longitudinal states
         self.y = stats.norm.rvs(loc=mean_y_init, scale=np.sqrt(self.sigma2_l), size=1)
+        
+        # JM Saving the start values (useful for reset())
         self.mean_y_init = mean_y_init
         self.mean_tl_init = 2.0
         self.Etl = self.mean_tl_init
         self.tl = stats.norm.rvs(loc=self.mean_tl_init, scale=np.sqrt(self.sigma2_l), size=1)
-        # Ey, or y^*
-        self.Ey = mean_y_init
+        self.Ey = mean_y_init # JM Ground Truth
+
+        # JM Survival/hazard parameters
         self.beta_s=beta_s1
         self.beta_sd=beta_s2
         self.beta_sd_cum=beta_s3
         self.beta_alpha = beta_alpha
         self.shape = omega
         self.h0=h0
+        
+        # JM I think fixed parameters for the modell
         self.k=2
         self.theta_a=np.array([9.5,-1.5])
         self.beta_l=np.array([3.3,0.1,0.3,0.4, 0.25,1.0, -1*10**(-4),0])
@@ -71,9 +84,10 @@ class DIVAT_env:
         self.beta_d=np.array([1,0.2,0.15,0.2,0.15])
         self.timeout = timeout
         self.eta_tox=50
+        # JM Censoring rates 
         self.censor_dist = stats.weibull_min(2,scale=8000)
         self.censortime = self.censor_dist.rvs(size=1)[0]
-        self.max_visit = 1500
+        self.max_visit = 1500 # JM WIe weit wird in die Zukunft nach den nächsten visit geschaut
         
         # gamma intensity parameters
         self.nu = np.exp(2.5)
