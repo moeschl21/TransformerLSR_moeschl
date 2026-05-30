@@ -176,7 +176,7 @@ class DIVAT_env:
         self.censortime = self.censor_dist.rvs(size=1)[0]
         return obs
 
-
+    # JM Get all info about the patient
     def get_data_i(self):
         data_info = {}
         data_info['BMI'] = self.BMI
