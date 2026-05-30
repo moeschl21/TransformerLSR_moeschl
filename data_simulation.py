@@ -96,20 +96,22 @@ class DIVAT_env:
 
 
 
-
+    # JM Die Funktion rechnet aus wie viel Restwirkung/belastung des Medikaments noch im System sind
+    # JM t_upper neuer Zeitpunkt, t_lower alter Zeitpunkt, di Dosis
     def toxicity(self, t_upper, t_lower, di):
         ti = t_upper
         t_r = t_lower
-        tox = self.tox*np.exp(-(ti-t_r)/self.eta_tox)
+        tox = self.tox*np.exp(-(ti-t_r)/self.eta_tox) # JM Berechnet die Toxizität aus der bisherigen gespeicherten (self.tox und dem rest)
         weight=(1-np.exp(-(ti-t_r)/self.eta_tox))
-        tox=tox+di*weight
+        tox=tox+di*weight # JM Vergangene tox nimmt ab und der rest nimmt dann zu
         return tox
     
+    # JM Berechnet Hazard Rate (h(t), Ground Truth) zum Zeitpunkt t_upper in Abhänigkeit verschiedener Parameter 
     def hazard_fun(self,t_upper,di):
-        Zvec_tl = np.array([1,di,self.ageD, self.DGF, self.BMI, self.time,self.time**2])
-        Rvec_tl = np.array([1,di,self.time])
-        mean_fixed_tl = np.dot(Zvec_tl, self.beta_tl)
-        mean_rand_tl = np.dot(Rvec_tl, self.b_il_tl)
+        Zvec_tl = np.array([1,di,self.ageD, self.DGF, self.BMI, self.time,self.time**2]) # JM Fixed Parameter
+        Rvec_tl = np.array([1,di,self.time]) # JM Random effects vector
+        mean_fixed_tl = np.dot(Zvec_tl, self.beta_tl) 
+        mean_rand_tl = np.dot(Rvec_tl, self.b_il_tl) # JM self.beta_tl ist der patienten spezifische random effects Anteil
         Etl = mean_rand_tl+mean_fixed_tl
         Zvec = np.array([1,di,self.ageD, self.DGF, self.BMI,Etl.item(), self.time,self.time**2])
         Rvec = np.array([1,di,self.time])
@@ -139,20 +141,22 @@ class DIVAT_env:
 
 
     # soft reset; keep the same personal data
+    # JM Setzt dynamische Zustände der Umgebungen zurück, also Zeit longitudinale Werte, Tox etc.
     def reset(self):
-        self.y = stats.norm.rvs(loc=self.mean_y_init, scale=np.sqrt(self.sigma2_l), size=1)
+        self.y = stats.norm.rvs(loc=self.mean_y_init, scale=np.sqrt(self.sigma2_l), size=1) # JM Neue Anfangswerte
         self.Ey = self.mean_y_init
 
-        self.Etl = self.mean_tl_init
+        self.Etl = self.mean_tl_init # JM gleiche wie oben
         self.tl = stats.norm.rvs(loc=self.mean_tl_init, scale=np.sqrt(self.sigma2_l), size=1)
 
         self.time = 0
         self.steps_elapsed=0
         self.tox = 0
         obs = self.get_obs()
-        return obs
+        return obs # JM dort sind dann einfach nochmal die Daten auf und gibt sie weiter
     
-    # hard reset; redraw the random effect and personal data, or load from argument
+    # hard reset; redraw the random effect and personal data, or load from argument (JM je Patient)
+    # JM die Methode wird benutzt um ein Objekt immer wieder zu resetten und dann so das Datenset aufzubauen, die Daten werden dann nach und nach seperat gespeichert (siehe simulate_traj())
     def hard_reset(self,info_i=None):
         if info_i:
             self.b_il = info_i['b_il']
@@ -160,7 +164,7 @@ class DIVAT_env:
             self.ageD = info_i['ageD']
             self.DGF = info_i['DGF']
             self.b_il_tl = info_i['b_il_tl']
-        else:
+        else: # JM Es wird alles neu gezogen
             self.b_il = stats.multivariate_normal.rvs(mean=np.array([0,0,0]),
                                                   cov=np.array([0.2**2,0.07**2,1*10**(-8)]), size=1)
             self.b_il_tl = stats.multivariate_normal.rvs(mean=np.array([0,0,0]),
@@ -168,7 +172,7 @@ class DIVAT_env:
             self.DGF = stats.binom.rvs(n=1, p=0.4, size=1)[0]
             self.ageD = stats.norm.rvs(loc=0, scale=1, size=1)[0]
             self.BMI = stats.norm.rvs(loc=0, scale=1, size=1)[0]
-        obs = self.reset()
+        obs = self.reset() # JM noch die Anfangsmessungen etc auch zurückzusetzen
         self.censortime = self.censor_dist.rvs(size=1)[0]
         return obs
 
