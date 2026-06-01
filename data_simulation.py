@@ -194,6 +194,7 @@ class DIVAT_env:
         return obs
     
     # "thinning" algorithm for survival  (JM check supplements for thinning algo)
+    # JM accepted means patient died 
     def sample_event(self,di,delta_t):
         t_initial=self.time
         t_lower = self.time
@@ -341,13 +342,13 @@ class DIVAT_env:
     # JM updates longitudinal variables for time t_ij
     def update_long(self,di,t_ij,update_obs=False):
         
-        Zvec_tl = np.array([1,di,self.ageD, self.DGF, self.BMI, t_ij,t_ij**2])
+        Zvec_tl = np.array([1,di,self.ageD, self.DGF, self.BMI, t_ij,t_ij**2]) # JM Das müsste Tacrolimus sein
         Rvec_tl = np.array([1,di,t_ij])
         mean_fixed_tl = np.dot(Zvec_tl, self.beta_tl)
         mean_rand_tl = np.dot(Rvec_tl, self.b_il_tl)
         self.Etl = mean_rand_tl+mean_fixed_tl
 
-        Zvec = np.array([1,di,self.ageD, self.DGF, self.BMI,self.tl.item(), t_ij,t_ij**2])
+        Zvec = np.array([1,di,self.ageD, self.DGF, self.BMI,self.tl.item(), t_ij,t_ij**2]) # JM Das müsste Kreatinin Y sein
         Rvec = np.array([1,di,t_ij])
         mean_fixed = np.dot(Zvec, self.beta_l)
         mean_rand = np.dot(Rvec, self.b_il)
@@ -361,7 +362,7 @@ class DIVAT_env:
             self.y = stats.norm.rvs(loc=self.Ey, scale=np.sqrt(self.sigma2_l), size=1)
 
 
-
+    # JM Main function for the simulation
     def step(self, action):
         di = action[0]
         delta_t = action[1]
@@ -374,10 +375,10 @@ class DIVAT_env:
         t_ij = self.time+delta_t
         death = False
         #self.alpha = sigmoid_k(np.dot(self.theta_a,np.array([1,self.y.item()])),self.k)
-        death, T_max = self.sample_event(di,delta_t)
+        death, T_max = self.sample_event(di,delta_t)    # JM Samples if the patient dies
         #survive until t_ij
         if not death:
-            if t_ij >= self.censortime:
+            if t_ij >= self.censortime: # JM Integrale werden nur bis zum Zensurzeitpunkt dann berechnet
                 print("censored")
                 Zeta = self.cumulative_prob(t_upper=self.censortime,t_lower=self.time,di=di)
                 Lambda = self.cumulative_intensity(t_upper=self.censortime,di=di)
@@ -387,7 +388,7 @@ class DIVAT_env:
                 self.tox =  self.toxicity(t_ij, self.time, di)
                 self.time = self.censortime
                 
-            else:
+            else: # JM nicht Tod, dann geht es normal weiter
                 Zeta = self.cumulative_prob(t_upper=t_ij,t_lower=self.time,di=di)
                 Lambda = self.cumulative_intensity(t_upper=t_ij,di=di)
                 done = False
@@ -395,7 +396,7 @@ class DIVAT_env:
                 self.update_long(di,t_ij,update_obs=True)
                 self.tox =  self.toxicity(t_ij, self.time, di)
                 self.time = t_ij
-        else:
+        else: # JM Integrale nur bis zum Todeszeitpunkt
             Zeta = self.cumulative_prob(t_upper=T_max,t_lower=self.time,di=di)
             Lambda = self.cumulative_intensity(t_upper=T_max,di=di)
             done = True
@@ -414,21 +415,21 @@ class DIVAT_env:
 
 
 # Y1 indep (tl) Y2 dep (creat)
-
+# JM creates patient history
 def simulate_traj(env):
 
     _ = env.hard_reset()
     data_info = env.get_data_i()
     death,done = False,False
-    Y1,Y2,A = [],[],[]
-    obstime,true_inten = [],[]
+    Y1,Y2,A = [],[],[] # JM Tacrolimus, Kreatinin und Dosis
+    obstime,true_inten = [],[] # JM No times set yet
     true_surv,Lam_vec,Zeta_vec = [],[],[]
     tox = []
     num_visit = 0
     Lam_sum,Zeta_sum = 0,0
     while (not done):
         num_visit += 1
-        dosage,dt,inten = env.sample_treatment()
+        dosage,dt,inten = env.sample_treatment() # dt ist die Wartezeit bis zum nächsten Besuch, also delta_t
         action = [dosage,dt]
         state = env.get_obs()
         # record data pre step
@@ -456,13 +457,14 @@ def simulate_traj(env):
           
     else:
         last_haz = 0
-    
+    # JM ll steht für log likelihood und bspw. surv_non_ll für den nicht Event teil der Survival log likelihood
     surv_ll = last_haz
     surv_non_ll = Zeta_sum
 
-    event_ll = np.sum(np.log(true_inten).reshape(-1)[:-1]).item() 
+    event_ll = np.sum(np.log(true_inten).reshape(-1)[:-1]).item() # JM es wird die Intensität für den "nächsten besuch also + 1 berechnet, dieser ist natürlich aber kein Echter besuch wenn Patient stirbt oder den letzten Besuch nicht machen kann
     event_non_ll = Lam_sum
-
+    
+    # JM Saving everything
     out_dict = {}
     out_dict["Y1"],out_dict["Y2"],out_dict["A"] = Y1,Y2,A
     out_dict["time"],out_dict["obstime"],out_dict["event"] = true_time,obstime,death
@@ -483,7 +485,7 @@ def simulate_traj(env):
 
 
 
-
+# JM
 def main(args=None):
     if args is None:
         args = readParser()
@@ -492,13 +494,14 @@ def main(args=None):
     np.random.seed(seednum)
 
 
-    d_long = 3
+    d_long = 3 # JM Count of longitudinal variables
 
     save_path = 'data/'+args.save +'_'+str(args.num_traj)+'_visit_'+str(args.timeout)+'_long_'+str(d_long)+'_seed_'+str(args.seed)+'.pkl'
     patient_info_path = 'data/'+args.save +'_'+str(args.num_traj)+'_visit_'+str(args.timeout)+'_long_'+str(d_long)+'_seed_'+str(args.seed)+'_patientInfo.pkl'
-    I,J = args.num_traj, args.timeout
-   
-    Y1,Y2,A,X1,X2,X3 = [],[],[],[],[],[]
+    I,J = args.num_traj, args.timeout # JM Number of patients and maximum time
+
+    # JM Initialize all lists
+    Y1,Y2,A,X1,X2,X3 = [],[],[],[],[],[] # JM X's is Baseline
     time,obstime,event,true_prob,num_visit,true_inten = [],[],[],[],[],[]
     true_surv,Lam,Zeta = [],[],[]
     last_obs,last_treat = [],[]
@@ -506,6 +509,7 @@ def main(args=None):
     surv_ll,surv_non_ll,event_ll,event_non_ll = [],[],[],[]
     ID,visit = [],[]
     env = DIVAT_env(timeout=J)
+    # JM helping variables for statistics
     data_info = []
     death_count = 0
     death_time = []
@@ -515,6 +519,7 @@ def main(args=None):
     dt_vec  = []
     patient_info = []
     length_checker = False
+    # JM For every patient we are doing a trajectory, alles wird in einem Array, Besuchsweise reingepackt
     for i in range(I):
         while not length_checker:
             result = simulate_traj(env)
@@ -558,6 +563,8 @@ def main(args=None):
     mean_visit = np.array(mean_visit).reshape(-1)
     event_time = np.array(event_time).reshape(-1)
     cens_time = np.array(cens_time).reshape(-1)
+    
+    # JM wenn angegeben, dann kann man hier ein Histogramm plotten lassen
     if args.plot:
         plt.hist(death_time)
         plt.savefig("plots/death_time_hist.png")
@@ -574,7 +581,7 @@ def main(args=None):
         plt.savefig("plots/cens_hist.png")
         plt.close()
 
-
+    # JM Formatierung in die richtigen Datenformate
     #Y1,Y2,Y3,Y4 = np.array(Y1,dtype=np.float64),np.array(Y2,dtype=np.float64),np.array(Y3,dtype=np.float64),np.array(Y4,dtype=np.float64)
     Y1,Y2,A = np.array(Y1,dtype=np.float64),np.array(Y2,dtype=np.float64),np.array(A,dtype=np.float64)
     X1,X2,X3 = np.array(X1).astype(np.float64), np.array(X2).astype(np.float64),np.array(X3).astype(np.float64)
@@ -592,6 +599,7 @@ def main(args=None):
                                 np.array(event_ll).astype(np.float64),np.array(event_non_ll).astype(np.float64)
     tox = np.array(tox,dtype=np.float64)
 
+    # JM Prints Statistics
     print(f"death rate: {death_count/args.num_traj}")
     
     death_time = np.sum(death_time)/death_count
@@ -624,7 +632,7 @@ def main(args=None):
     dag_mat = np.array([[0,0,0],[1,0,0],[1,1,0]])
     dag_mat = dag_mat[:d_long,:d_long]
 
-
+    # JM DAG = Directed Acyclic Graph Gibt die Abhänigkeiten der Variablen an also Y1 beinflusst Y2 und Y3 und Y2 beinfluss Y3 
     dag_mat = dag_mat.transpose()
     dag_info={}
     dag_info["dag"]= dag_mat
@@ -636,6 +644,7 @@ def main(args=None):
     
     dag_info["order"] = dag_order
 
+    # JM Speichert DAG Info und Patientinfos nochmal
     info_path = 'data/'+args.save +'_'+str(args.num_traj)+'_visit_'+str(args.timeout)+'_long_'+str(d_long)+'_info.pkl'
     with open(info_path, 'wb') as f:
         pickle.dump(dag_info,f)
