@@ -10,6 +10,9 @@ import argparse
 import random
 import matplotlib.pyplot as plt
 
+# JM Nochmal dann irgendwann mit dem Paper die ganzen Zahlen vergleichen und mal genau rausfinden was hier genau was ist.
+#
+
 # JM Reads command-line arguments centrally and then return them after parsing.
 def readParser():
     # JM Adding ArgumentParser-object which sepcifies the arguments, what is allowed and default values
@@ -65,7 +68,7 @@ class DIVAT_env:
         self.mean_y_init = mean_y_init
         self.mean_tl_init = 2.0
         self.Etl = self.mean_tl_init
-        self.tl = stats.norm.rvs(loc=self.mean_tl_init, scale=np.sqrt(self.sigma2_l), size=1)
+        self.tl = stats.norm.rvs(loc=self.mean_tl_init, scale=np.sqrt(self.sigma2_l), size=1) #JM müsste auch long variable sein
         self.Ey = mean_y_init # JM Ground Truth
 
         # JM Survival/hazard parameters
@@ -106,7 +109,7 @@ class DIVAT_env:
         tox=tox+di*weight # JM Vergangene tox nimmt ab und der rest nimmt dann zu
         return tox
     
-    # JM Berechnet Hazard Rate (h(t), Ground Truth) zum Zeitpunkt t_upper in Abhänigkeit verschiedener Parameter 
+    # JM Berechnet Hazard Rate (h(t)) zum Zeitpunkt t_upper in Abhänigkeit verschiedener Parameter 
     def hazard_fun(self,t_upper,di):
         Zvec_tl = np.array([1,di,self.ageD, self.DGF, self.BMI, self.time,self.time**2]) # JM Fixed Parameter
         Rvec_tl = np.array([1,di,self.time]) # JM Random effects vector
@@ -190,7 +193,7 @@ class DIVAT_env:
         obs = [self.tl.item(),self.y.item()]
         return obs
     
-    # "thinning" algorithm
+    # "thinning" algorithm for survival  (JM check supplements for thinning algo)
     def sample_event(self,di,delta_t):
         t_initial=self.time
         t_lower = self.time
@@ -225,9 +228,9 @@ class DIVAT_env:
         return accepted, t_accept
 
    
-
+    # JM Calculate the integrals of intensity and hazard functions
     def cumulative_intensity(self, t_upper,di):
-        I = integrate.quad(self.intensity_fun, self.time, t_upper, args=(di) )[0]
+        I = integrate.quad(self.intensity_fun, self.time, t_upper, args=(di) )[0] #JM bei 0 liegt nur der Integralwert, bei [1] der Fehler
         cumu_prob = 1-np.exp(-I)
         #return(cumu_prob)
         return I
@@ -239,7 +242,7 @@ class DIVAT_env:
 
 
 
-
+    # JM Berechnet Intensity Rate (lambda(t)) zum Zeitpunkt t_upper in Abhänigkeit verschiedener Parameter 
     def intensity_fun(self,t_upper,di):
         Zvec_tl = np.array([1,di,self.ageD, self.DGF, self.BMI, self.time,self.time**2])
         Rvec_tl = np.array([1,di,self.time])
@@ -269,11 +272,11 @@ class DIVAT_env:
 
         lam = lam_0*np.exp(-(nu_1*Ey_updated+nu_2*di\
                +nu_0)) \
-        *ti**(self.shape-1)
+        *ti**(self.shape-1) # JM anscheinend wie weibull 
         return lam
 
 
-
+    # "thinning" algorithm for recurrent visits (zeitpunkte) (JM check supplements for thinning algo)
     def sample_visit(self,di):
         t_lower = self.time
         t_upper = self.time+self.max_visit
@@ -317,7 +320,7 @@ class DIVAT_env:
         return accepted, t_accept
 
 
-    # measurement dependent treatment assignment
+    # measurement dependent treatment assignment and gives back dosage and next visit time and the intensity at the next visit
     def sample_treatment(self):
         #update alpha first
         #self.alpha = sigmoid_k(np.dot(self.theta_a,np.array([1,self.y.item()])),self.k)
@@ -326,7 +329,7 @@ class DIVAT_env:
         dosage = stats.norm.rvs(loc=dosage_mean, scale=np.sqrt(self.sigma2_d), size=1).item()
         accepted,time = self.sample_visit(dosage)
         if not accepted:
-            time = self.max_visit
+            time = self.max_visit # JM Kommt aus dem thinning, wenn nicht berechnet, dann maximale Wartezeit
         else:
             time = time - self.time
         inten_next = self.intensity_fun(self.time+time,dosage).item()
@@ -335,7 +338,7 @@ class DIVAT_env:
 
 
     # have Ey depend on the actual outcome of tl for now
-
+    # JM updates longitudinal variables for time t_ij
     def update_long(self,di,t_ij,update_obs=False):
         
         Zvec_tl = np.array([1,di,self.ageD, self.DGF, self.BMI, t_ij,t_ij**2])
