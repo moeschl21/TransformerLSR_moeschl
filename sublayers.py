@@ -52,7 +52,7 @@ class Encoder_Layer(nn.Module):
         
         return x
     
-
+# JM Is never used // Instead Encoder is used twice 
 class Decoder_Layer(nn.Module):
     """
     Decoder Block
