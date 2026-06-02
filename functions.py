@@ -165,7 +165,7 @@ def init_weights(m):
         torch.nn.init.xavier_uniform_(m.weight)
 
 
-# JM Creates an attention mask für the encode decoder transition (Aus den visists werden dann die Masken gemacht auch für die long. Variablen 1 visit heißt ja 3 long V.)
+# JM Creates an attention mask für the encode decoder transition (Aus den visits werden dann die Masken gemacht auch für die long. Variablen 1 visit heißt ja 3 long V.)
 def enc_dec_mask(batch_mask,src_period,trg_period):
     device = batch_mask.device
     mask_clone = batch_mask.clone().cpu()
