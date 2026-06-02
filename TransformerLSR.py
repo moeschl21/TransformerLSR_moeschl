@@ -18,13 +18,13 @@ def dag_mask(pad,dag,nan_mask):
     dag_length = dag.shape[1]
     batch_size,seq_length = pad.shape[0],pad.shape[1]
     pad_clone = pad.clone().cpu()
-    # expand the pad mask 
+    # expand the pad mask JM weil ein Besuch nicht ein Token sondern in unserem Fall 3 Token (3 long. Variablen) hier dag_length
     pad_vec = []
     for _ in range(dag_length):
         pad_vec.append(pad_clone)
     pad_clone = torch.stack(pad_vec,dim=1).permute(0,2,1).reshape(batch_size,seq_length*dag_length)
 
-    # stack the nan mask
+    # stack the nan mask JM auch auf Token Ebene bringen wie oben
     nan_mask = torch.stack(nan_mask,dim=1).permute(0,2,1).reshape(batch_size,seq_length*dag_length).cpu()
 
     # size is batch size * seq length
@@ -33,7 +33,8 @@ def dag_mask(pad,dag,nan_mask):
     nan_mask = nan_mask.unsqueeze(-2)
     mask = pad_mask & nan_mask
 
-    future_mask = np.triu(np.ones((1,size,size)), k=1).astype('uint8')==0   
+    future_mask = np.triu(np.ones((1,size,size)), k=1).astype('uint8')==0   # Not allow to see the future
+    ####
     # now process dag mask
     dag_mask = np.copy(dag.transpose())
     np.fill_diagonal(dag_mask,1)
