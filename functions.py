@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+# JM Wandelt einen Pandas Df in eine Liste um.
 def get_tensors_instance(df, long=["Y1","Y2","Y3","Y4","Y5"],base=["X1","X2","X3"], obstime = "obstime",device='cpu'):
 
     df.loc[:,"id_new"] = df.groupby(by="id").grouper.group_info[0]
@@ -33,7 +34,8 @@ def get_tensors(df, long=["Y1","Y2","Y3","Y4","Y5"], base=["X1","X2","X3"], obst
     
     I = len(np.unique(df.loc[:,"id"]))
     max_len = np.max(df.loc[:,"visit"]) + 1
-    
+
+    # JM Padding alles erstmal mit 0en voll machen
     x_base = torch.zeros(I, max_len, len(base),device=device)
     x_long = torch.zeros(I, max_len, len(long),device=device)
     mask = torch.zeros((I, max_len), dtype=torch.bool,device=device)
@@ -54,27 +56,27 @@ def get_tensors(df, long=["Y1","Y2","Y3","Y4","Y5"], base=["X1","X2","X3"], obst
 
 
 
-
+    # JM Für jeden visit jj von Patient i werden Daten eingetragen und Masken entsprechend auf 1 gesetzt
     for index, row in df.iterrows():
         ii = int(row.loc["id_new"])
         jj = int(row.loc["visit"])
 
-        x_base[ii,jj,:] = torch.tensor(row.loc[base],device=device)
+        x_base[ii,jj,:] = torch.tensor(row.loc[base],device=device) # JM Base f+r Baseline Kovariablen, also in dem Fall I Patienten, max_len die maximalen visiots und dann noch bspw. 3 Baseline Kovariablen
         x_long[ii,jj,:] = torch.tensor(row.loc[long],device=device)
         mask[ii,jj] = 1
         long_mask[ii,jj] = 1
         full_mask[ii,jj] = 1
         obs_time[ii,jj] = row.loc[obstime]
-        # extend mask for the death event 
+        # extend mask for the death event (jj + 1)
         if (jj+1) == row.loc["num_visit"] and row.loc["event"] is True:
-            inten_mask[ii,jj+1] = 1
-            long_mask[ii,jj+1] = 0
+            inten_mask[ii,jj+1] = 1 # For the surv Event we need it for the Surv Likelihood
+            long_mask[ii,jj+1] = 0 # No longitudinal Likelihood for the death time
 
         if (jj+1) == row.loc["num_visit"]:
-            full_mask[ii,jj+1] = 1
+            full_mask[ii,jj+1] = 1 # JM Egal wie die Full mask wird auf 1 gesetzt
 
-
-    e = torch.tensor(df.loc[df["visit"]==0,"event"].values,device=device,dtype=torch.bool).squeeze()
+    
+    e = torch.tensor(df.loc[df["visit"]==0,"event"].values,device=device,dtype=torch.bool).squeeze() # JM event und time ist ja für alle Einträge gleich
     t = torch.tensor(df.loc[df["visit"]==0,"time"].values,dtype=torch.float32,device=device).squeeze()
     
     total_time = torch.cat([obs_time,t.unsqueeze(-1).reshape(obs_time.shape[0],-1)],dim=-1)
@@ -86,7 +88,8 @@ def get_tensors(df, long=["Y1","Y2","Y3","Y4","Y5"], base=["X1","X2","X3"], obst
     return batch
 
 
-# same as above, just with additional ikelihood info for evaluation
+# same as above, just with additional ikelihood info for evaluation (JM nur visit_event_ll etc. sind noch dazu gekommen)
+# JM Wird für die Evaluation gebraucht
 def get_tensors_likelihood(df, long=["Y1","Y2","Y3","Y4","Y5"], base=["X1","X2","X3"], obstime = "obstime",device='cpu',eval_mode=False):
 
     df.loc[:,"id_new"] = df.groupby(by="id").grouper.group_info[0]
@@ -162,11 +165,11 @@ def init_weights(m):
         torch.nn.init.xavier_uniform_(m.weight)
 
 
-
+# JM Creates an attention mask für the encode decoder transition (Aus den visists werden dann die Masken gemacht auch für die long. Variablen 1 visit heißt ja 3 long V.)
 def enc_dec_mask(batch_mask,src_period,trg_period):
     device = batch_mask.device
     mask_clone = batch_mask.clone().cpu()
-    batch_size,length = mask_clone.shape[0],mask_clone.shape[1]
+    batch_size,length = mask_clone.shape[0],mask_clone.shape[1] # Patients and max visits
     stack_list = []
     for _ in range(src_period):
         stack_list.append(mask_clone)
@@ -188,6 +191,7 @@ def enc_dec_mask(batch_mask,src_period,trg_period):
 
     return stacked_mask.to(device=device)
 
+# JM Methode zum erstellen einer Maske, welche kontrolliert was die Tokens sehen dürfen
 def get_mask(pad = None, future = True, window = None,period = None):
     device = pad.device
     pad_clone = pad.clone().cpu()
@@ -209,7 +213,7 @@ def get_mask(pad = None, future = True, window = None,period = None):
     return mask.to(device=device)
 
 
-
+# JM Learnrate Schedular, adapts learn rate
 class NoamOpt:
     "Optim wrapper that implements rate."
     def __init__(self, optimizer, model_size, warmup, factor):
@@ -236,7 +240,7 @@ class NoamOpt:
         return self.factor * \
             (self.model_size ** (-0.5) *
             min(step ** (-0.5), step * self.warmup ** (-1.5)))
-        
+# Helper for above        
 def get_std_opt(optimizer, d_model, warmup_steps=200, factor=1):
     return NoamOpt(optimizer, d_model, warmup_steps, factor)
   
