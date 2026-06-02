@@ -23,7 +23,7 @@ class Encoder_Layer(nn.Module):
                  ffn_dim=64):
         super().__init__()
         
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout) 
         
         self.Attention = MultiHeadAttention(d_model, nhead)
                 
@@ -34,7 +34,7 @@ class Encoder_Layer(nn.Module):
             nn.Dropout(dropout)
             )
         
-        self.layerNorm1 = nn.LayerNorm(d_model)
+        self.layerNorm1 = nn.LayerNorm(d_model) # Normalisiert die werte und hat auch gewichte die dann die normalisierung lernen
         self.layerNorm2 = nn.LayerNorm(d_model)
         
     def forward(self, q, kv, mask):
