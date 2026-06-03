@@ -88,7 +88,7 @@ def inverse_permutation(a):
     return b
 
 
-
+# JM Achtung teilweise andere Werte im Paper verwendet als hier als default festgelegt
 class TransformerLSR(nn.Module):
     """
     a flexible joint model for longitudinal variables, survival data, and recurrent event data, while allowing causal dependence among longitudinal variables.
