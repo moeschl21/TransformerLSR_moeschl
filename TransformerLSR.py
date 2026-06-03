@@ -276,11 +276,13 @@ class TransformerLSR(nn.Module):
         return x, attention_mask
 
     # output processing for the two events type
-    # pred type: 1 is visit and 2 is survival
+    # pred type: 1 is visit and 2 is survival JM eigentlich mit strings "visit"
+    # JM Siehe oben sehr ähnlich
     def output_proc_events(self,trg_base,trg_mask,pred_time,pred_type):
         batch_size,length = trg_base.shape[0],trg_base.shape[1]
         base_embedding = self.base_embedding(trg_base)
         temp_embedding = self.temporal_embedding(batch_size, length, self.d_model,pred_time)
+        # JM Bereitet den Token vor, was vorhergesagt werden soll.
         if pred_type == "visit":
             pred_val = self.d_long
         else:
@@ -293,6 +295,7 @@ class TransformerLSR(nn.Module):
         attention_mask = dec_mask(trg_mask,dag_mat)
         return x, attention_mask
 
+    
     def forward(self,batch):     
         # longitudinal prediction, output length: visit_num -1
         long_preds = self.predict_next_long_treat(batch)
