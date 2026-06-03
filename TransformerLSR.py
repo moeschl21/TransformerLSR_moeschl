@@ -192,7 +192,7 @@ class TransformerLSR(nn.Module):
     # the decoder forward
     # input are embedded decoder input, and key/value (memory) from the encoder
     def decode(self,m,encDec_mask,q,trg_mask):
-        combined_mask = torch.cat([encDec_mask,trg_mask],dim=-1)
+        combined_mask = torch.cat([encDec_mask,trg_mask],dim=-1) # JM For _m
         # decoder layers
         for layer in self.decoder_layers:
             # concatenate tokens
@@ -203,8 +203,6 @@ class TransformerLSR(nn.Module):
 
     # processing for the encoder
     # handles missing data here, too, by overlapping the attention mask with the nan mask
-
-
     def input_proc(self,input_long,input_base,input_mask,obs_time):
         input_long_clone = torch.clone(input_long)
         batch_size,length = input_long.shape[0],input_long.shape[1]
