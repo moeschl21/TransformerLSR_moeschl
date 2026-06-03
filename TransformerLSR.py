@@ -346,7 +346,7 @@ class TransformerLSR(nn.Module):
     
 
     # evaluation for longitudinal variables and treatments autoregressively
-
+    ######################
     def predict_next_long_treat(self,batch):     
         #read batch
         long,base,batch_mask = batch["long"],batch["base"],batch["mask"]
