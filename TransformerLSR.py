@@ -244,17 +244,22 @@ class TransformerLSR(nn.Module):
         return x, attention_mask
     
     # processing for the decoder *for the longitudinal part*
+    # JM trg_long: bereits vorhergesagt, trg_base: Baseline features, pred_time: Zeitpunkte für die vorhergesagt wird
+    # JM long_range: Welche Variable soll vorhergesagt werden
     def output_proc(self,trg_long,trg_base,trg_mask,pred_time,long_range):
         batch_size,length = trg_base.shape[0],trg_base.shape[1]
         base_embedding = self.base_embedding(trg_base)
         temp_embedding = self.temporal_embedding(batch_size, length, self.d_model,pred_time)
-
+        
+        # JM Welche Variable soll vorhergesagt werden "Begin of Sequence"
+        # Es wird quasi ein Vektor erzeugt (aus dem Embedding durch das multiplizieren)
+        # welches dem Decoder sagt "Wir wollen XY Vorhersagen" (Er lernt das dann mit diesem Eingabe Vektor dann immer)
         bos = torch.ones([batch_size,length],dtype=torch.long,device=self.device) * self.dag_order[long_range-1]
         bos_embeddings = torch.cat([self.dict_embedding(bos),base_embedding,temp_embedding],dim=-1)
         embed_list = []
         #treat is predicted in the same manner as longs
         for i in range(1,long_range):
-            long_i_ind = self.dag_order[i-1]
+            long_i_ind = self.dag_order[i-1] # JM Autoregression beachten
             # trg_long is a sorted list of tensors of shape [batch_size,length,1]
             long_i_embedding = self.long_embeddings[long_i_ind](trg_long[i-1])
             long_i_embedding = torch.cat([long_i_embedding,base_embedding,temp_embedding],dim=-1)
