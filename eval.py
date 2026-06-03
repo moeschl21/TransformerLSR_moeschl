@@ -24,11 +24,12 @@ import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # computes the sum of square errors for event likelihood
+# JM Lam und Zeta ist die Integralapproximation pro Intervall
 def MSE_likelihood(visit_inten,Lam,surv_inten,Zeta,batch):
     long_mask = batch["longmask"]
     batch_mask = batch["mask"]
     death_mask = batch["intenmask"]
-    #intensity is from the second visit to the last visit
+    #intensity is from the second visit to the last visit (t_0 as starting point)
     visit_event_ll = (torch.log(visit_inten)*long_mask[:,1:]).sum(dim=-1)
     visit_non_ll = (Lam * batch_mask).sum(dim=-1)
     visit_pred_likelihood = visit_event_ll - visit_non_ll
@@ -224,6 +225,7 @@ def main(args=None):
     model.eval()
 
     # long prediction
+    # JM Beinhaltet die Fehler
     num_tokens = 0
     temp_result = {}
     for i in range(d_long):
@@ -240,7 +242,7 @@ def main(args=None):
     temp_result["ibs"] = 0
 
 
-
+##############################
     for batch in range(0, len(test_id), batch_size):
 
         indices = test_id[batch:batch+batch_size]
