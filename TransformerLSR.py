@@ -54,7 +54,7 @@ def dag_mask(pad,dag,nan_mask):
     return mask.to(device=device)
 
 
-
+# JM Decoder Maske (ähnlich wie oben nur ohne future mask (brauchen wir ja nicht? decoder soll ja zukunft bestimmen?))
 def dec_mask(pad,dag):
     device = pad.device
     dag_length = dag.shape[1]
