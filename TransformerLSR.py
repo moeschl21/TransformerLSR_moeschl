@@ -327,6 +327,7 @@ class TransformerLSR(nn.Module):
         #return long_preds, None, surv_inten, None, Zeta
         return long_preds,visit_inten,surv_inten,Lambda,Zeta
         #return long_preds, visit_inten, None, Lambda, None
+
     
     def compute_Zeta(self,batch):
         input_long,input_base = batch["long"],batch["base"]
