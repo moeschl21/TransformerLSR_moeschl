@@ -12,11 +12,14 @@ def clones(module, N):
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 
-
+# JM die Maske die die Reihenfolge festlegt und was gesehen werden etc.
+# JM Pad: Tensor-Maske pro Patient und Visit
+# JM Dag: Adjazenz Matrix (welche Variable auf welche Beziehung hat)
+# JM nan_mask: Wo fehlen Werte (pro Variable)
 def dag_mask(pad,dag,nan_mask):
     device = pad.device
     dag_length = dag.shape[1]
-    batch_size,seq_length = pad.shape[0],pad.shape[1]
+    batch_size,seq_length = pad.shape[0],pad.shape[1] 
     pad_clone = pad.clone().cpu()
     # expand the pad mask JM weil ein Besuch nicht ein Token sondern in unserem Fall 3 Token (3 long. Variablen) hier dag_length
     pad_vec = []
@@ -33,15 +36,15 @@ def dag_mask(pad,dag,nan_mask):
     nan_mask = nan_mask.unsqueeze(-2)
     mask = pad_mask & nan_mask
 
-    future_mask = np.triu(np.ones((1,size,size)), k=1).astype('uint8')==0   # Not allow to see the future
-    ####
+    future_mask = np.triu(np.ones((1,size,size)), k=1).astype('uint8')==0   # Not allow to see the future JM damit Autoregressiv
+    
     # now process dag mask
     dag_mask = np.copy(dag.transpose())
-    np.fill_diagonal(dag_mask,1)
+    np.fill_diagonal(dag_mask,1) # Diag auf 1 (jede Variable darf sich selbst sehen)
     dag_mask = torch.from_numpy(dag_mask).to(torch.bool)
     dag_mask = ~dag_mask
     expand_vec = []
-    for _ in range(seq_length):
+    for _ in range(seq_length): # JM Für jeden Visit sind ja die Abhänigkeiten gleich
         expand_vec.append(dag_mask)
     dag_mask = torch.block_diag(*expand_vec)
     dag_mask = ~dag_mask
