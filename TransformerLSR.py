@@ -120,40 +120,43 @@ class TransformerLSR(nn.Module):
                  num_decoder_layers = 3,
                  dropout = 0.2,
                  num_exp = 500,
-                 num_sample = 100,
+                 num_sample = 100, # JM Evtl für die Monte-Carlo sachen
                  ffn_dim = 64,
                  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
         super().__init__()
 
         self.d_model = d_model
         # order consistent with *input* (pre-sorted)
-        self.long_embeddings = clones(nn.Linear(1,d_model),d_long)
-        self.base_embedding = nn.Linear(d_base,d_model)      
+        self.long_embeddings = clones(nn.Linear(1,d_model),d_long) # JM Each long. variable got their embedding
+        self.base_embedding = nn.Linear(d_base,d_model)
+
+        # JM Building the Encoder Input ist 3*32 da alle in dim 32 eingebettet werden)
         self.encoder_layers = nn.ModuleList([Encoder_Layer(3*d_model,nhead,dropout,ffn_dim=ffn_dim)
                                              for _ in range(num_encoder_layers)])
-        # use encoder structure for decoder
+        # use encoder structure for decoder (JM in decode they implemented the decoder stuff)
         self.decoder_layers = nn.ModuleList([Encoder_Layer(3*d_model,nhead,dropout,ffn_dim=ffn_dim)
                                              for _ in range(num_decoder_layers)])
 
-        # by same convention, let's use pre-sorted indices
+        # by same convention, let's use pre-sorted indices (Output heads, also Embedding -> wieder zurück)
         self.long_p = clones(nn.Linear(3*d_model,1),d_long)
         self.surv = nn.Linear(3*d_model, 1)
         self.inten = nn.Linear(3*d_model,1)
         self.softplus1 = nn.Softplus()
         self.softplus2 = nn.Softplus()
-        self.embed_ln_src = nn.LayerNorm(3*d_model)
+        self.embed_ln_src = nn.LayerNorm(3*d_model) 
         self.embed_ln_trg = nn.LayerNorm(3*d_model)
         # used to handle types of prediction tokens; 0-(d_long-1) is for long, d_long is for visit event, and d_long+1 is for surv event
+        # JM Sagt im Prinzip dem Decoder einfach nur was er Vorherzusagen hat als "Vektor in d_model" 
         self.dict_embedding = nn.Embedding(d_long+2,d_model)
         self.num_exp = num_exp
         self.num_sample = num_sample
         self.device = device
         self.d_long = d_long
-        self.dag = dag_info["dag"]
-        self.dag_order = dag_info["order"]
+        self.dag = dag_info["dag"] # JM Matrix
+        self.dag_order = dag_info["order"] # JM AUtoregressive Ordnung
         self.inv_order = inverse_permutation(self.dag_order)
 
-
+    # JM Sinusoidalen pos Embedding for each visit and each patient ("actual time" aber durch einbeddung beschrieben)
     def temporal_embedding(self,batch_size, length, d_model, obs_time):
         """
         Positional Encoding for each visit
@@ -161,7 +164,7 @@ class TransformerLSR(nn.Module):
         Parameters
         ----------
         batch_size:
-            Number of subjects in batch
+            Number of subjects/patients in batch
         length:
             Number of visits
         d_model:
