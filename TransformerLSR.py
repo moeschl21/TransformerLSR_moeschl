@@ -387,7 +387,7 @@ class TransformerLSR(nn.Module):
     '''
 
 
-    # JM Integral Berechnung?
+    # JM Integral Berechnungen (Approx des Integrals über Zeitintervalle)
     def int_extra_times(self, input_memory, base,total_time,total_mask,mode="visit",step=5,last_mode=False):
         input_mask,out_mask = total_mask[:,:-1],total_mask[:,1:]
         num_samples = self.num_sample
