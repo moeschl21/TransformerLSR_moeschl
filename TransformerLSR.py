@@ -346,7 +346,6 @@ class TransformerLSR(nn.Module):
     
 
     # evaluation for longitudinal variables and treatments autoregressively
-    ######################
     def predict_next_long_treat(self,batch):     
         #read batch
         long,base,batch_mask = batch["long"],batch["base"],batch["mask"]
@@ -356,7 +355,7 @@ class TransformerLSR(nn.Module):
                                                                             batch_mask[:,:-1],obs_time[:,:-1]
         trg_base,out_mask,pred_time = base[:,1:],batch_mask[:,1:],obs_time[:,1:]
         
-        #proc for encoder
+        #proc for encoder; JM Tokenizing
         input_embeddings, src_mask = self.input_proc(input_long,input_base,input_mask,input_time)
         
         #encoding
@@ -364,15 +363,15 @@ class TransformerLSR(nn.Module):
         batch_size,trg_length = trg_base.shape[0],trg_base.shape[1]
         trg_long_list = []
         long_preds = []
-        #looping through autoregressively
-        for i in range(1,(self.d_long+1)):
+        #looping through autoregressively (JM) for every long Variable
+        for i in range(1,(self.d_long+1)): 
             trg_embeddings, trg_mask = self.output_proc(trg_long_list,trg_base,out_mask,pred_time,long_range=i)
             encDec_mask = enc_dec_mask(input_mask,self.d_long,i)
             dec_out = self.decode(memory,encDec_mask,trg_embeddings,trg_mask)
             x = dec_out.reshape(batch_size,trg_length,i,3*self.d_model).permute(0,2,1,3)
-            long_i_ind = self.dag_order[i-1]
-            long_i_pred = self.long_p[long_i_ind](x[:,i-1])
-            trg_long_list.append(long_i_pred)
+            long_i_ind = self.dag_order[i-1] # JM Holt den Index der auch der Reihenfolge entspricht vom vorhersagen
+            long_i_pred = self.long_p[long_i_ind](x[:,i-1]) # JM Last layer for prediction, gerade verstehe ich das so, dass immer alle Y1 von jedem visit vorhergesagt wird und dann geht es weiter zu visit2
+            trg_long_list.append(long_i_pred) 
         for i in range(self.d_long):
             long_preds.append(trg_long_list[self.inv_order[i]])
         long_preds = torch.cat(long_preds,dim=-1)
