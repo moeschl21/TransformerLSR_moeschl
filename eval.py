@@ -156,7 +156,7 @@ def main(args=None):
     data = data_all[data_all.obstime <= data_all.time]
 
     # JM Aufteilen der Daten
-    random_id = range(I) #np.random.permutation(range(I))
+    random_id = range(I) #np.random.permutation(range(I)) # JM Für reale Daten müsste man nochmal shuffeln 
     train_id = random_id[0:int(0.6*I)]
     vali_id = random_id[int(0.6*I):int(0.8*I)]
     test_id = random_id[int(0.8*I):I]
@@ -165,22 +165,23 @@ def main(args=None):
     vali_data = data[data["id"].isin(vali_id)]
     test_data = data[data["id"].isin(test_id)]
 
-    # Scale data using Min-Max Scaler XXXXXXXXXXX
+    # Scale data using Min-Max Scaler
     minmax_scaler = MinMaxScaler(feature_range=(-1,1))
 
-    train_data.loc[:,Y_str_list] = minmax_scaler.fit_transform(train_data.loc[:,Y_str_list])
+    train_data.loc[:,Y_str_list] = minmax_scaler.fit_transform(train_data.loc[:,Y_str_list]) # JM NUR auf die Trainingsdaten gefitted
     vali_data.loc[:,Y_str_list] = minmax_scaler.transform(vali_data.loc[:,Y_str_list])
     test_data.loc[:,Y_str_list] = minmax_scaler.transform(test_data.loc[:,Y_str_list])
 
-    LT = np.quantile(train_data['time'], [0.1] )[0]
+    LT = np.quantile(train_data['time'], [0.1] )[0] # JM Landmark time
+    # JM Zeitpunkte für die Surv Evaluation zwischen dem 10% und dem 90% Quantil (durch linspace)
     pred_times = np.quantile(train_data['time'].unique(), np.linspace(0.1,0.9,pred_window_length+1))[1:]
 
-    # use all data for accurate censoring distribution
+    # use all data for accurate censoring distribution JM Es werden alle Daten benutzt um die Zensierungsverteilung zu bekommen
     train_batch = get_tensors(data.copy(),long=Y_str_list)
-    train_e,train_t = train_batch["e"].numpy(), train_batch["t"].numpy()
+    train_e,train_t = train_batch["e"].numpy(), train_batch["t"].numpy() # JM train_e ist ob das Event stattgefunden hat und train_t ist dann die Event/Censoring Zeit
 
 
-    kmf_c = KaplanMeierFitter()
+    kmf_c = KaplanMeierFitter() # JM Schätzt wie wahrscheinlich es ist bis zu bestimmen Zeitpunkt nicht zensiert zu sein
     # not e to fit for censoring!
     kmf_c.fit(train_t,~train_e)
 
