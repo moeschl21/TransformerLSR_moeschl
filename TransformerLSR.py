@@ -328,7 +328,7 @@ class TransformerLSR(nn.Module):
         return long_preds,visit_inten,surv_inten,Lambda,Zeta
         #return long_preds, visit_inten, None, Lambda, None
 
-    
+    # JM Berechnet das Integral (Zeta= ∫h(t)dt), aber hier ohne Möglichkeit Predictions für die Survivals in der Zukunft zu machen (nicht wie bei predict_surv_marginal)
     def compute_Zeta(self,batch):
         input_long,input_base = batch["long"],batch["base"]
         total_time,total_mask = batch["totaltime"],batch["fullmask"]
@@ -477,7 +477,7 @@ class TransformerLSR(nn.Module):
 
     # assuming all sampled times are in [last_visit, bound) and inputs are not padded
     # used for visit time prediction during evaluation
-
+    # JM Bekommt Zeiten und berechnet intensitäten an diesen Zeiten
     def intensities_sampled_times(self,memory,base,sampled_times,encDec_mask):
         batch_size,sample_size = sampled_times.shape[0],sampled_times.shape[1]
         bos = torch.ones([batch_size,sample_size],dtype=torch.long,device=self.device) * self.d_long
