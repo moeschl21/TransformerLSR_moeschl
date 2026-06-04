@@ -500,7 +500,7 @@ class TransformerLSR(nn.Module):
     # predicting time
     # works in instance mode (only one Patient); batch mode is not supported currently, and provides limited computation benefit:
     # the amount of samples needed is batch_size*visit_num*thinningsample_num*MCsample_num, need to break up into minibatches anyway
-    # JM Simuliert mögliche nächste Visit Zeitpunkte
+    # JM Simuliert mögliche nächste Visit Zeitpunkte (Basically Thinning)
     def draw_next_times(self,input,bound):
         input_long,base,batch_mask,obs_time = input["long"],input["base"],input["mask"],input["obstime"]
         assert input_long.shape[0] == 1, "time prediction currently only supports instance mode"
@@ -559,7 +559,7 @@ class TransformerLSR(nn.Module):
         rst[who_not_accept&who_reach_further] = \
             sampled_times[:, -1][who_not_accept&who_reach_further]
 
-        return rst, weights
+        return rst, weights # JM Rst gibt viele nächste Visit Zeitpunkte raus im Eval.py wird dann pred_time berechnet mittels den gewichten also eine art Mittelwert
 
 
 
