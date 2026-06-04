@@ -498,27 +498,31 @@ class TransformerLSR(nn.Module):
 
     #Monte Carlo
     # predicting time
-    # works in instance mode; batch mode is not supported currently, and provides limited computation benefit:
+    # works in instance mode (only one Patient); batch mode is not supported currently, and provides limited computation benefit:
     # the amount of samples needed is batch_size*visit_num*thinningsample_num*MCsample_num, need to break up into minibatches anyway
+    # JM Simuliert mögliche nächste Visit Zeitpunkte
     def draw_next_times(self,input,bound):
         input_long,base,batch_mask,obs_time = input["long"],input["base"],input["mask"],input["obstime"]
         assert input_long.shape[0] == 1, "time prediction currently only supports instance mode"
         over_sample_rate = 5.0
         last_visit_time = obs_time[:,-1].item()
         boundary = last_visit_time + bound
+        # JM Zieht Zeiten aus dem Intervall
         times_for_bound = torch.empty(
             size=[self.num_sample], dtype=torch.float32, device=self.device
         ).uniform_( last_visit_time, boundary)
+        
         input_embeddings, src_mask = self.input_proc(input_long,base,batch_mask,obs_time)
         memory_instance = self.encode(input_embeddings,src_mask)
         memory_length = memory_instance.shape[1]
         instance_base = base[0,-1].reshape(1,1,-1)
         extra_base = instance_base.repeat(1,self.num_sample,1)
+        # JM Man darf auf alles schauen
         encDec_mask = enc_dec_mask(batch_mask,self.d_long,1)[:,-1].reshape(1,1,memory_length)
         encDec_mask = encDec_mask.repeat(1,self.num_sample,1)
 
         intensities_for_bound = self.intensities_sampled_times(memory_instance,extra_base,times_for_bound.unsqueeze(0),encDec_mask)
-        bounds = intensities_for_bound.max() * over_sample_rate
+        bounds = intensities_for_bound.max() * over_sample_rate # JM Obere Schranke für Thinning
         sample_rate = bounds
         S = self.num_exp
         rst = torch.empty(
