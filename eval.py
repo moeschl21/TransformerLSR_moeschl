@@ -289,64 +289,74 @@ def main(args=None):
         # now visit event comparison with the ground truth:
         batch  = get_tensors_likelihood(batch_data.copy(),long=Y_str_list,device=device)
         with torch.no_grad():
-            _,visit_inten,surv_inten,Lambda,Zeta = model(batch)
+            _,visit_inten,surv_inten,Lambda,Zeta = model(batch) # JM Berechnet die visit_inten an den Visit Zeitpunkten un die surv_inten am Event
         
         visit_ll_se,surv_ll_se = MSE_likelihood(visit_inten,Lambda,surv_inten,Zeta,batch)
-        temp_result["visit_ll_err"] += visit_ll_se
+        temp_result["visit_ll_err"] += visit_ll_se # JM Summiert den Fehler auf
         temp_result["surv_ll_err"] += surv_ll_se
         visit_ll_mask = batch["mask"]
-        temp_result["visit_ll_tokens"] += visit_ll_mask.sum().item()
+        temp_result["visit_ll_tokens"] += visit_ll_mask.sum().item() # JM Anzahl der visits
         # batch size for surv
-        temp_result["surv_ll_tokens"] += visit_ll_mask.shape[0]
+        temp_result["surv_ll_tokens"] += visit_ll_mask.shape[0] # Anzahl derPatienten im Batch
 
 
     for i in range(d_long):
         temp_result["Y"+str(i+1)+"err"] /= temp_result["Y"+str(i+1)+"tokens"]
-        temp_result["Y"+str(i+1)+"err"] = np.sqrt(temp_result["Y"+str(i+1)+"err"].item())
+        temp_result["Y"+str(i+1)+"err"] = np.sqrt(temp_result["Y"+str(i+1)+"err"].item()) # JM jetzt MSE
 
 
-    temp_result["visit_ll_err"] /= temp_result["visit_ll_tokens"]
+    temp_result["visit_ll_err"] /= temp_result["visit_ll_tokens"] # JM Wieder mitteln
     temp_result["surv_ll_err"] /= temp_result["surv_ll_tokens"]
 
-    temp_result["visit_ll_err"] = np.sqrt(temp_result["visit_ll_err"].item())
-    temp_result["surv_ll_err"] = np.sqrt(temp_result["surv_ll_err"].item())
+    temp_result["visit_ll_err"] = np.sqrt(temp_result["visit_ll_err"].item()) # RMSE
+    temp_result["surv_ll_err"] = np.sqrt(temp_result["surv_ll_err"].item()) 
 
 
     # survival analysis
     total_pred = []
     
     for batch in range(0, len(surv_id), batch_size):
-        indices = surv_id[batch:batch+batch_size]
+        # JM Nur die Patienten die für die Analyse geeignet sind time > LT
+        indices = surv_id[batch:batch+batch_size] 
         batch_data = tmp_data[tmp_data["id"].isin(indices)]
         batch = get_tensors(batch_data.copy(),long=Y_str_list,device=device,eval_mode=True)
 
         base_0 = batch["base"][:,0,:].unsqueeze(1)
         _batch_size = base_0.shape[0]        
+
+        ### Wird nicht benutzt?
         mask_T = torch.ones((_batch_size,1), dtype=torch.bool,device=device)
         time_extender = torch.ones([_batch_size,1],dtype=torch.float32,device=device)
         long_extender = torch.zeros([_batch_size,1,batch["long"].shape[2]],dtype=torch.float32,device=device)
+        ### Wird nicht benutzt?
+        
         surv_pred = torch.zeros(_batch_size,0,1,device=device)
 
         start_time = LT
 
-        for pt in pred_times:
+        for pt in pred_times: # JM Berechnet die Integrale immer zwischen den Intervallen
             with torch.no_grad():
-                surv_out = model.predict_surv_marginal(batch,end_time=pt,start_time=start_time)
+                surv_out = model.predict_surv_marginal(batch,end_time=pt,start_time=start_time) # JM noch keine Surv-Wkt nur das Integral h(t) hier
+            
             surv_pred = torch.cat((surv_pred, surv_out.unsqueeze(-1)), dim=1)
             start_time = pt
 
         surv_pred = surv_pred.squeeze().cpu().numpy().reshape(_batch_size,-1)
-        surv_pred = surv_pred.cumsum(axis=1)
-        surv_pred = np.exp(-surv_pred)
-        total_pred.append(surv_pred)
+        surv_pred = surv_pred.cumsum(axis=1) # JM SUmmieren
+        surv_pred = np.exp(-surv_pred) # JM Survival WKT jetzt
+        total_pred.append(surv_pred) # JM Hier sind jetzt nach und nach aufsummiert die SURV-WKT drin (Integral immer von LT aus und nach und nach mit pt weiter)
     
     total_pred = np.concatenate(total_pred,axis=0)
 
+    # JM Brier Score für jede prediction Zeit
     bs= brier_fast(total_pred, tmp_batch["e"].numpy().reshape(len(surv_id)), tmp_batch["t"].numpy().reshape(len(surv_id)),
                     kmf_c, LT, pred_times)
 
+    # Durschnitt des Bries Scores über die Zeit (Durchschnittlicher Fehler über den gesamten Vorhersagehorizont)
     ibs = get_integrated(bs,pred_times)
 
+
+    # JM Save everything
     for i in range(len(bs.reshape(-1))):
             temp_result["brier"+"score"+str(i+1)] =bs.reshape(-1)[i]
 
