@@ -30,21 +30,21 @@ def MSE_likelihood(visit_inten,Lam,surv_inten,Zeta,batch):
     batch_mask = batch["mask"]
     death_mask = batch["intenmask"]
     #intensity is from the second visit to the last visit (t_0 as starting point)
-    visit_event_ll = (torch.log(visit_inten)*long_mask[:,1:]).sum(dim=-1)
-    visit_non_ll = (Lam * batch_mask).sum(dim=-1)
+    visit_event_ll = (torch.log(visit_inten)*long_mask[:,1:]).sum(dim=-1) # Σ log λ(t_j)
+    visit_non_ll = (Lam * batch_mask).sum(dim=-1) # ∫ λ(t)dt und dann aufsummiert
     visit_pred_likelihood = visit_event_ll - visit_non_ll
-    visit_truth_likelihood = batch["visit_ll"]
-    visit_se = torch.sum((visit_pred_likelihood-visit_truth_likelihood)**2)
+    visit_truth_likelihood = batch["visit_ll"] # Ground Truth?
+    visit_se = torch.sum((visit_pred_likelihood-visit_truth_likelihood)**2) # Squared Error
     visit_se_out = visit_se.cpu().numpy()
     
-    # survival error computation
-    surv_event_ll = (torch.log(surv_inten)*death_mask[:,1:]).sum(dim=-1)
-    surv_non_ll = (Zeta * batch_mask).sum(dim=-1)
+    # survival error computation (Similar as above)
+    surv_event_ll = (torch.log(surv_inten)*death_mask[:,1:]).sum(dim=-1) # log h(T)
+    surv_non_ll = (Zeta * batch_mask).sum(dim=-1) # ∫ h(t)dt
     surv_pred_likelihood = surv_event_ll - surv_non_ll
     surv_truth_likelihood = batch["surv_ll"]
     surv_se = torch.sum((surv_pred_likelihood-surv_truth_likelihood)**2)
     surv_se_out = surv_se.cpu().numpy()
-    return visit_se_out,surv_se_out
+    return visit_se_out,surv_se_out # SE: Squared Error
 
 # JM Fix DeprecationWarning np.trapz to np.trapezoid
 def get_integrated(x, times):
