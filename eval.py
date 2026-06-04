@@ -198,11 +198,11 @@ def main(args=None):
     Y3_nan_inds = np.random.choice(test_data.index,size = int(args.Y3_missing*len(test_data)),replace=False)
 
 
-    
+    # JM Create Model (läd das Modell unten aus main.py)
     model = TransformerLSR(d_long=args.d_long,d_base=3,dag_info=dag_info, d_model=args.model_size, nhead=args.num_head,
                 num_encoder_layers=args.num_enc_layer,num_decoder_layers=args.num_dec_layer,device=device)
     
-
+    # JM Wenn wir mit Missing machen, dann werden jetzt die NaN werte gesetzt
     if args.model == "LSR_missing":
         test_data["Y1"][Y1_nan_inds] = float('nan') 
         test_data["Y2"][Y2_nan_inds] = float('nan') 
@@ -215,16 +215,18 @@ def main(args=None):
     # Only keep longitudinal observations <= landmark time
     tmp_data = tmp_data.loc[tmp_data["obstime"]<=LT,:]
 
+    # JM Die ID's die dann übrig bleiben
     surv_id = tmp_data["id"].unique()
 
     tmp_batch = get_tensors(tmp_data.copy(),long=Y_str_list)
     
     model.to(device=device)
-    
+
+    # JM Läd die gepeicherten Gewichte
     model.load_state_dict(torch.load(model_save_path, map_location=device))
     batch_size = args.batch_size
     
-    model.eval()
+    model.eval() # JM Set the model in Evalution Mode (bspw. Dropout aus)
 
     # long prediction
     # JM Beinhaltet die Fehler
@@ -239,30 +241,31 @@ def main(args=None):
     temp_result["visit_ll_err"] = 0
     temp_result["visit_ll_tokens"] = 0
 
+    # JM Schleife für die Brier Scores
     for i in range(pred_window_length):
         temp_result["brier"+"score"+str(i+1)] = 0
-    temp_result["ibs"] = 0
+    temp_result["ibs"] = 0 # Integrated Brier Score
 
 
-##############################
     for batch in range(0, len(test_id), batch_size):
 
         indices = test_id[batch:batch+batch_size]
         batch_data = test_data[test_data["id"].isin(indices)]
         batch  = get_tensors(batch_data.copy(),long=Y_str_list,device=device)
 
+        # JM Ist nur schneller (berechnet die Grads nicht)
         with torch.no_grad():
             long_preds = model.predict_next_long_treat(batch)
         
         mask = batch["mask"][:,1:]
-        long = batch["long"][:,1:]
+        long = batch["long"][:,1:] # JM long. Messwerte
         long_missing = batch["long"][:,1:]
         _batch_size,long_dim,length = long.shape[0],long.shape[-1],long.shape[1]
         nan_mask = torch.isnan(long_missing)
         y_target = torch.clone(long)
-        target_mask  = mask.unsqueeze(-1).repeat(1,1,long_dim)
+        target_mask  = mask.unsqueeze(-1).repeat(1,1,long_dim) # JM Maske auf die richtige Form bringen
         reverseNan_mask =  ~nan_mask
-        combined_mask = reverseNan_mask & target_mask
+        combined_mask = reverseNan_mask & target_mask # JM Echter visit und kein NaN // Die Maske ist nur noch fürn Fehler dann da
 
 
         #inverse transform here
@@ -270,18 +273,18 @@ def main(args=None):
         y_target = y_target.cpu().numpy()
         combined_mask = combined_mask.cpu().numpy()
         nan_mask_copy = nan_mask.cpu().numpy()
-        y_hat[nan_mask_copy] = 0.0
+        y_hat[nan_mask_copy] = 0.0 # JM Dort wo NaN oder kein echter Visit ist wollen wir ja keine Fehler messen (wie auch sinnvoll?)
         y_target[nan_mask_copy] = 0.0
-        y_hat = minmax_scaler.inverse_transform(y_hat.reshape(_batch_size*length,long_dim))
+        y_hat = minmax_scaler.inverse_transform(y_hat.reshape(_batch_size*length,long_dim)) # JM Auf die Originalskala zurück transformieren
         y_target = minmax_scaler.inverse_transform(y_target.reshape(_batch_size*length,long_dim))
         y_hat = y_hat.reshape(_batch_size,length,long_dim)
         y_target = y_target.reshape(_batch_size,length,long_dim)
         
-        for i in range(d_long):
+        for i in range(d_long): # JM Wir behalten nur gültige Werte
             y_hat_i = y_hat[:,:,i].reshape(-1)[combined_mask[:,:,i].reshape(-1) > 0]
             y_target_i = y_target[:,:,i].reshape(-1)[combined_mask[:,:,i].reshape(-1) > 0]
             temp_result["Y"+str(i+1)+"err"] += np.sum((y_hat_i-y_target_i)**2)
-            temp_result["Y"+str(i+1)+"tokens"] += combined_mask[:,:,i].sum().item()
+            temp_result["Y"+str(i+1)+"tokens"] += combined_mask[:,:,i].sum().item() # JM Wie viele Werte wurde dafür verwendet
 
         # now visit event comparison with the ground truth:
         batch  = get_tensors_likelihood(batch_data.copy(),long=Y_str_list,device=device)
