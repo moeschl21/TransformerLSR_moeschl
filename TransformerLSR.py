@@ -314,12 +314,12 @@ class TransformerLSR(nn.Module):
         # visit
         trg_embeddings, trg_mask = self.output_proc_events(trg_base,out_mask,pred_time,pred_type="visit")
         visit_x = self.decode(memory,encDec_mask,trg_embeddings,trg_mask)
-        visit_inten = self.softplus1(self.inten(visit_x)).squeeze(-1)
+        visit_inten = self.softplus1(self.inten(visit_x)).squeeze(-1) # JM das sind die Werte direkt am Zeitpunkt für den log term
 
         # surv
         _trg_embeddings, _trg_mask = self.output_proc_events(trg_base,out_mask,pred_time,pred_type="surv")
         surv_x = self.decode(memory,encDec_mask,_trg_embeddings,_trg_mask)
-        surv_inten = self.softplus2(self.surv(surv_x)).squeeze(-1)
+        surv_inten = self.softplus2(self.surv(surv_x)).squeeze(-1) # JM das sind die Werte direkt am Zeitpunkt für den log term
         
         # now compute the integrals; length: total_num - 1
         Lambda = self.int_extra_times(memory,trg_base,total_time,total_mask,mode="visit")
@@ -451,7 +451,7 @@ class TransformerLSR(nn.Module):
         long,base,batch_mask = batch["long"],batch["base"],batch["mask"]
         obs_time = batch["obstime"]
 
-        input_long,input_base,input_mask,input_time = long,base,batch_mask,obs_time
+        input_long,input_base,input_mask,input_time = long,base,batch_mask,obs_time # JM Hier wird diesmal nichts abgeschnitten
         #proc for encoder
         input_embeddings, src_mask = self.input_proc(input_long,input_base,input_mask,input_time)
         #encoding
@@ -468,7 +468,8 @@ class TransformerLSR(nn.Module):
 
         end_time = torch.ones([batch_size,1], dtype=torch.float32, device=self.device) * end_time
         total_time = torch.cat([start_time,end_time],dim=-1)
-        
+
+        # JM Hazard integral berechnet
         Zeta = self.int_extra_times(memory, last_base,total_time,batch_mask,mode="surv",last_mode=True)
 
         return Zeta
