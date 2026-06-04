@@ -58,7 +58,7 @@ def main(args=None):
     parser.add_argument("--num_enc_layer", default=4, type=int)  
     parser.add_argument("--num_dec_layer", default=4, type=int)   
     parser.add_argument("--num_head", default=4, type=int)      
-    parser.add_argument("--model_size", default=32, type=int)       
+    parser.add_argument("--model_size", default=32, type=int)    # JM Embedding   
     parser.add_argument('--suffix', type=str, default='eval')
     parser.add_argument('--model', type=str, default='LSR')
     parser.add_argument("--d_long", default=3, type=int) 
@@ -67,23 +67,23 @@ def main(args=None):
     parser.add_argument("--Y1_missing", default=0, type=float)
     parser.add_argument("--Y2_missing", default=0, type=float)
     parser.add_argument("--Y3_missing", default=0, type=float)
-    parser.add_argument("--inten_weight", default=0.01, type=float)
+    parser.add_argument("--inten_weight", default=0.01, type=float) # JM Loss weights
     parser.add_argument("--surv_weight", default=0.1, type=float)
     parser.add_argument("--lr", default=0.0003, type=float) # learning rate
     args = parser.parse_args()
 
 
     
-    # make logger here
+    # make logger here JM Eig wie print
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter(fmt="[ %(asctime)s ] %(message)s",
-                                datefmt="%a %b %d %H:%M:%S %Y")
+                                datefmt="%a %b %d %H:%M:%S %Y") # JM Thats how the print will look like then
     sHandler = logging.StreamHandler()
     sHandler.setFormatter(formatter)
     logger.addHandler(sHandler)
     work_dir = os.path.join('./work_dir',
-                                time.strftime("%Y-%m-%d", time.localtime()))
+                                time.strftime("%Y-%m-%d", time.localtime())) # JM Ordner für die loggs
     if not os.path.exists(work_dir):
         os.makedirs(work_dir, exist_ok=True)
     time_prefix = time.strftime("%H:%M:%S", time.localtime())
@@ -105,7 +105,7 @@ def main(args=None):
     if not os.path.exists("./models"):
         os.makedirs("./models")
 
-
+    # JM Liste der Long Variablen
     Y_str_list = []
     for i in range(args.d_long):
         Y_str = "Y"+str(i+1)
@@ -113,11 +113,11 @@ def main(args=None):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    dag_info_path = f'data/{args.data}_info.pkl' 
+    dag_info_path = f'data/{args.data}_info.pkl' # JM Wird in data_simulation erstellt
     with open(dag_info_path, 'rb') as f:
         dag_info = pickle.load(f)
     
-
+    # JM Hier landen die Results
     d_long = args.d_long
     long_result = {}
     event_ll_result={}
@@ -127,11 +127,11 @@ def main(args=None):
     event_ll_result["surv_ll_mse"] = []
     #surv_result = {}
 
-    pred_window_length = 6
+    pred_window_length = 6 # JM Anzahl der zuk. Zeitpunkte an denen Survival bewertet wird?
     
     
     dt_result = {}
-    dt_result["time_err"] = []
+    dt_result["time_err"] = [] # JM Fehler für Visit Zeiten
 
     seed = args.seed
     seednum = seed
@@ -145,6 +145,7 @@ def main(args=None):
     data_all = pd.read_pickle(dataset_path) 
     I = data_all["id"].values[-1]+1
 
+    # JM Logger Print
     logger.info('=' * 50)
     logger.info(f'Starting evaluation for dataset: {args.data}')
     logger.info(f'{args.num_head} heads, {args.num_enc_layer} enc layers,{args.num_dec_layer} dec layers, {args.model_size} model dimension')
@@ -154,17 +155,17 @@ def main(args=None):
 
     data = data_all[data_all.obstime <= data_all.time]
 
+    # JM Aufteilen der Daten
     random_id = range(I) #np.random.permutation(range(I))
     train_id = random_id[0:int(0.6*I)]
     vali_id = random_id[int(0.6*I):int(0.8*I)]
     test_id = random_id[int(0.8*I):I]
 
-
     train_data = data[data["id"].isin(train_id)]
     vali_data = data[data["id"].isin(vali_id)]
     test_data = data[data["id"].isin(test_id)]
 
-    ## Scale data using Min-Max Scaler
+    # Scale data using Min-Max Scaler XXXXXXXXXXX
     minmax_scaler = MinMaxScaler(feature_range=(-1,1))
 
     train_data.loc[:,Y_str_list] = minmax_scaler.fit_transform(train_data.loc[:,Y_str_list])
