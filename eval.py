@@ -258,7 +258,7 @@ def main(args=None):
             long_preds = model.predict_next_long_treat(batch)
         
         mask = batch["mask"][:,1:]
-        long = batch["long"][:,1:] # JM long. Messwerte
+        long = batch["long"][:,1:] # JM long. Messwerte (aber noch runterskaliert)
         long_missing = batch["long"][:,1:]
         _batch_size,long_dim,length = long.shape[0],long.shape[-1],long.shape[1]
         nan_mask = torch.isnan(long_missing)
