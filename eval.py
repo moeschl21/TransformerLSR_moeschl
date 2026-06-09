@@ -25,6 +25,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 # computes the sum of square errors for event likelihood
 # JM Lam und Zeta ist die Integralapproximation pro Intervall
+# JM Name irrefürhend hier wird nur squared Error berechnet nicht MSE!
 def MSE_likelihood(visit_inten,Lam,surv_inten,Zeta,batch):
     long_mask = batch["longmask"]
     batch_mask = batch["mask"]
@@ -42,9 +43,9 @@ def MSE_likelihood(visit_inten,Lam,surv_inten,Zeta,batch):
     surv_non_ll = (Zeta * batch_mask).sum(dim=-1) # ∫ h(t)dt
     surv_pred_likelihood = surv_event_ll - surv_non_ll
     surv_truth_likelihood = batch["surv_ll"]
-    surv_se = torch.sum((surv_pred_likelihood-surv_truth_likelihood)**2) # Sum of SE
+    surv_se = torch.sum((surv_pred_likelihood-surv_truth_likelihood)**2) # SE
     surv_se_out = surv_se.cpu().numpy()
-    return visit_se_out,surv_se_out # SE: Squared Error
+    return visit_se_out,surv_se_out # SE
 
 # JM Fix DeprecationWarning np.trapz to np.trapezoid
 def get_integrated(x, times):
