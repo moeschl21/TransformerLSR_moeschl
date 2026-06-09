@@ -264,7 +264,7 @@ def main(args=None):
         logger.info(f"ground truth visit NON-event intensity:{ground_truth_non_ll:.2f}")
 
         # more detailed comparison
-        first_traj_len = torch.sum(batch["mask"][0],dim=-1).cpu().numpy()
+        first_traj_len = torch.sum(batch["mask"][0],dim=-1).cpu().numpy() # Wie viele Visits hat der erste Patient im Batch
         logger.info(f"sample trajectory visit intensities:{np.log(visit_inten[0,:first_traj_len-1].detach().cpu().numpy())}")
         ground_intensities = batch_data["true_inten"].to_numpy()[:first_traj_len-1]
         logger.info(f"ground truth visit event intensities:{np.log(ground_intensities)}")
