@@ -30,6 +30,7 @@ def MSE_likelihood(visit_inten,Lam,surv_inten,Zeta,batch):
     long_mask = batch["longmask"]
     batch_mask = batch["mask"]
     death_mask = batch["intenmask"]
+    
     #intensity is from the second visit to the last visit (t_0 as starting point)
     visit_event_ll = (torch.log(visit_inten)*long_mask[:,1:]).sum(dim=-1) # Σ log λ(t_j)
     visit_non_ll = (Lam * batch_mask).sum(dim=-1) # ∫ λ(t)dt und dann aufsummiert
@@ -306,9 +307,9 @@ def main(args=None):
 
 
     temp_result["visit_ll_err"] /= temp_result["visit_ll_tokens"] # JM Wieder mitteln
-    temp_result["surv_ll_err"] /= temp_result["surv_ll_tokens"]
+    temp_result["surv_ll_err"] /= temp_result["surv_ll_tokens"] # 
 
-    temp_result["visit_ll_err"] = np.sqrt(temp_result["visit_ll_err"].item()) # RMSE
+    temp_result["visit_ll_err"] = np.sqrt(temp_result["visit_ll_err"].item()) # JM RMSE
     temp_result["surv_ll_err"] = np.sqrt(temp_result["surv_ll_err"].item()) 
 
 
