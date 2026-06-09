@@ -34,7 +34,7 @@ def MSE_likelihood(visit_inten,Lam,surv_inten,Zeta,batch):
     visit_non_ll = (Lam * batch_mask).sum(dim=-1) # ∫ λ(t)dt und dann aufsummiert
     visit_pred_likelihood = visit_event_ll - visit_non_ll
     visit_truth_likelihood = batch["visit_ll"] # Ground Truth?
-    visit_se = torch.sum((visit_pred_likelihood-visit_truth_likelihood)**2) # MSE
+    visit_se = torch.sum((visit_pred_likelihood-visit_truth_likelihood)**2) # Sum of SE
     visit_se_out = visit_se.cpu().numpy()
     
     # survival error computation (Similar as above)
@@ -42,7 +42,7 @@ def MSE_likelihood(visit_inten,Lam,surv_inten,Zeta,batch):
     surv_non_ll = (Zeta * batch_mask).sum(dim=-1) # ∫ h(t)dt
     surv_pred_likelihood = surv_event_ll - surv_non_ll
     surv_truth_likelihood = batch["surv_ll"]
-    surv_se = torch.sum((surv_pred_likelihood-surv_truth_likelihood)**2) # MSE
+    surv_se = torch.sum((surv_pred_likelihood-surv_truth_likelihood)**2) # Sum of SE
     surv_se_out = surv_se.cpu().numpy()
     return visit_se_out,surv_se_out # SE: Squared Error
 
