@@ -302,7 +302,7 @@ def main(args=None):
 
     for i in range(d_long):
         temp_result["Y"+str(i+1)+"err"] /= temp_result["Y"+str(i+1)+"tokens"]
-        temp_result["Y"+str(i+1)+"err"] = np.sqrt(temp_result["Y"+str(i+1)+"err"].item()) # JM jetzt MSE
+        temp_result["Y"+str(i+1)+"err"] = np.sqrt(temp_result["Y"+str(i+1)+"err"].item()) # JM jetzt RMSE
 
 
     temp_result["visit_ll_err"] /= temp_result["visit_ll_tokens"] # JM Wieder mitteln
