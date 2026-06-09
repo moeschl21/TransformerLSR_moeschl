@@ -298,8 +298,7 @@ def main(args=None):
         visit_ll_mask = batch["mask"]
         temp_result["visit_ll_tokens"] += visit_ll_mask.sum().item() # JM Anzahl der visits
         # batch size for surv
-        temp_result["surv_ll_tokens"] += visit_ll_mask.shape[0] # Anzahl der Patienten im Batch also für RMSE über alle Patienten dann
-
+        temp_result["surv_ll_tokens"] += visit_ll_mask.shape[0] # Anzahl der Patienten im Batch für RMSE
 
     for i in range(d_long):
         temp_result["Y"+str(i+1)+"err"] /= temp_result["Y"+str(i+1)+"tokens"]
