@@ -22,7 +22,7 @@ def readParser():
     parser.add_argument('--num_traj', type=int, default=1000, # JM Patients
                         help='number of trajectories')
     parser.add_argument('--timeout', type=int, default=1000,
-                        help='environment timeout')
+                        help='environment timeout') # JM Maximale visits 
     parser.add_argument('--save', type=str, default='DIVAT_sim',
                     help='data file name')
     parser.add_argument("--plot", action="store_true")   
