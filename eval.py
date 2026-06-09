@@ -313,7 +313,7 @@ def main(args=None):
     temp_result["surv_ll_err"] = np.sqrt(temp_result["surv_ll_err"].item()) 
 
 
-    # survival analysis
+    # survival analysis // Brier Scores
     total_pred = []
     
     for batch in range(0, len(surv_id), batch_size):
