@@ -34,8 +34,8 @@ def MSE_likelihood(visit_inten,Lam,surv_inten,Zeta,batch):
     visit_event_ll = (torch.log(visit_inten)*long_mask[:,1:]).sum(dim=-1) # Σ log λ(t_j)
     visit_non_ll = (Lam * batch_mask).sum(dim=-1) # ∫ λ(t)dt und dann aufsummiert
     visit_pred_likelihood = visit_event_ll - visit_non_ll
-    visit_truth_likelihood = batch["visit_ll"] # Ground Truth?
-    visit_se = torch.sum((visit_pred_likelihood-visit_truth_likelihood)**2) # Sum of SE
+    visit_truth_likelihood = batch["visit_ll"] # Ground Truth
+    visit_se = torch.sum((visit_pred_likelihood-visit_truth_likelihood)**2) # Sum of SE per Batch
     visit_se_out = visit_se.cpu().numpy()
     
     # survival error computation (Similar as above)
@@ -43,9 +43,9 @@ def MSE_likelihood(visit_inten,Lam,surv_inten,Zeta,batch):
     surv_non_ll = (Zeta * batch_mask).sum(dim=-1) # ∫ h(t)dt
     surv_pred_likelihood = surv_event_ll - surv_non_ll
     surv_truth_likelihood = batch["surv_ll"]
-    surv_se = torch.sum((surv_pred_likelihood-surv_truth_likelihood)**2) # SE
+    surv_se = torch.sum((surv_pred_likelihood-surv_truth_likelihood)**2) # Sum of SE per Batch
     surv_se_out = surv_se.cpu().numpy()
-    return visit_se_out,surv_se_out # SE
+    return visit_se_out,surv_se_out # Sum of SE per Batch
 
 # JM Fix DeprecationWarning np.trapz to np.trapezoid
 def get_integrated(x, times):
