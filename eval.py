@@ -145,7 +145,7 @@ def main(args=None):
     dataset_path = f'data/{args.data}_seed_{seed}.pkl' 
 
     data_all = pd.read_pickle(dataset_path) 
-    I = data_all["id"].values[-1]+1
+    I = data_all["id"].values[-1]+1 # JM Maximale Patienten Anzahl einfach
 
     # JM Logger Print
     logger.info('=' * 50)
@@ -242,13 +242,19 @@ def main(args=None):
     temp_result["surv_ll_tokens"] = 0
     temp_result["visit_ll_err"] = 0
     temp_result["visit_ll_tokens"] = 0
+    
+    ## JM Beginn Speicher der visit_inten (erste Patient im Batch) fürs plotten
+    temp_result["visit_log_inten_list"] = []
+    temp_result["visit_log_inten_truth"] = []
+    temp_result["visit_times"] = []
+    ## JM Ende
 
     # JM Schleife für die Brier Scores
     for i in range(pred_window_length):
         temp_result["brier"+"score"+str(i+1)] = 0
     temp_result["ibs"] = 0 # Integrated Brier Score
 
-
+    first_run = True
     for batch in range(0, len(test_id), batch_size):
 
         indices = test_id[batch:batch+batch_size]
@@ -292,6 +298,18 @@ def main(args=None):
         batch  = get_tensors_likelihood(batch_data.copy(),long=Y_str_list,device=device)
         with torch.no_grad():
             _,visit_inten,surv_inten,Lambda,Zeta = model(batch) # JM Berechnet die visit_inten an den Visit Zeitpunkten un die surv_inten am Event
+
+        ## JM Beginn Speicher der visit_inten (erste Patient im Batch) fürs plotten
+        if first_run:
+            first_traj_len = torch.sum(batch["mask"][0],dim=-1).cpu().numpy()
+            
+            temp_result["visit_log_inten_list"] = np.log(visit_inten[0,:first_traj_len-1].detach().cpu().numpy())
+            
+            temp_result["visit_log_inten_truth"] =  np.log(batch_data["true_inten"].to_numpy()[:first_traj_len-1])
+            temp_result["visit_times"] = batch["obstime"][0][1:first_traj_len].detach().cpu().numpy()
+            
+            first_run = False     
+        ## JM Ende
         
         visit_ll_se,surv_ll_se = MSE_likelihood(visit_inten,Lambda,surv_inten,Zeta,batch)
         temp_result["visit_ll_err"] += visit_ll_se # JM Summiert den Fehler auf
