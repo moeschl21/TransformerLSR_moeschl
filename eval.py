@@ -364,7 +364,7 @@ def main(args=None):
             start_time = pt
 
         surv_pred = surv_pred.squeeze().cpu().numpy().reshape(_batch_size,-1)
-        surv_pred = surv_pred.cumsum(axis=1) # JM SUmmieren
+        surv_pred = surv_pred.cumsum(axis=1) # JM SUmmieren kommulliert (also immer den wert drauf aber immer noch im Vektor)
         surv_pred = np.exp(-surv_pred) # JM Survival WKT jetzt
         total_pred.append(surv_pred) # JM Hier sind jetzt nach und nach aufsummiert die SURV-WKT drin (Integral immer von LT aus und nach und nach mit pt weiter)
     
