@@ -508,7 +508,7 @@ def main(args=None):
     tox = []
     surv_ll,surv_non_ll,event_ll,event_non_ll = [],[],[],[]
     ID,visit = [],[]
-    env = DIVAT_env(timeout=J)
+    env = DIVAT_env(timeout=J) # Simulation environment
     # JM helping variables for statistics
     data_info = []
     death_count = 0
@@ -522,7 +522,7 @@ def main(args=None):
     # JM For every patient we are doing a trajectory, alles wird in einem Array, Besuchsweise reingepackt
     for i in range(I):
         while not length_checker:
-            result = simulate_traj(env)
+            result = simulate_traj(env) # Simulation 
             if result["num_visit"]>1:
                 length_checker = True  
         ID.extend(np.repeat(i,result["num_visit"]))
