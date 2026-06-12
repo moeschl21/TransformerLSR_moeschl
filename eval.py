@@ -17,7 +17,7 @@ from lifelines import KaplanMeierFitter
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-pd.options.mode.chained_assignment = None
+pd.options.mode.chained_assignment = None 
 
 # JM Ignore future warnings for better debugging
 import warnings
