@@ -174,9 +174,19 @@ def main(args=None):
     vali_data.loc[:,Y_str_list] = minmax_scaler.transform(vali_data.loc[:,Y_str_list])
     test_data.loc[:,Y_str_list] = minmax_scaler.transform(test_data.loc[:,Y_str_list])
 
+    # JM ACHTUNG hier kann es zum Fehler kommen LT und pred_times werden nicht auf derselben Zeitbasis berechnet.
+    # Dadurch kann es passieren, dass pred_times[0] < LT gilt und man evtl. dann Surv-WKT größer 1 bekommt! 
+    # Weil dann das Integral dann Grenzen hat die das Vorzeichen drehen (gerade beim ersten Wert fällt das auf)
+    
     LT = np.quantile(train_data['time'], [0.1] )[0] # JM Landmark time
     # JM Zeitpunkte für die Surv Evaluation zwischen dem 10% und dem 90% Quantil (durch linspace)
     pred_times = np.quantile(train_data['time'].unique(), np.linspace(0.1,0.9,pred_window_length+1))[1:]
+
+    # JM DEBUG
+    print("LT:", LT)
+    print("pred_times:", pred_times)
+    print("pred_times[0] - LT:", pred_times[0] - LT)
+    # JM DEBUG
 
     # use all data for accurate censoring distribution JM Es werden alle Daten benutzt um die Zensierungsverteilung zu bekommen
     train_batch = get_tensors(data.copy(),long=Y_str_list)
