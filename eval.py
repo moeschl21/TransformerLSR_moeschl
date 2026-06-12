@@ -247,6 +247,9 @@ def main(args=None):
     temp_result["visit_log_inten_list"] = []
     temp_result["visit_log_inten_truth"] = []
     temp_result["visit_times"] = []
+    temp_result["pred_times"] = []
+    temp_result["mean_surv"] = []
+    temp_result["total_pred"] = []
     ## JM Ende
 
     # JM Schleife für die Brier Scores
@@ -366,6 +369,12 @@ def main(args=None):
         total_pred.append(surv_pred) # JM Hier sind jetzt nach und nach aufsummiert die SURV-WKT drin (Integral immer von LT aus und nach und nach mit pt weiter)
     
     total_pred = np.concatenate(total_pred,axis=0)
+
+    # JM Berechnungen für die Mean Surv kurve
+    mean_surv = total_pred.mean(axis=0)
+    temp_result["pred_times"] = pred_times
+    temp_result["mean_surv"] = mean_surv
+    temp_result["total_pred"] = total_pred
 
     # JM Brier Score für jede prediction Zeit
     bs= brier_fast(total_pred, tmp_batch["e"].numpy().reshape(len(surv_id)), tmp_batch["t"].numpy().reshape(len(surv_id)),
