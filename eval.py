@@ -261,6 +261,7 @@ def main(args=None):
     temp_result["pred_times_plot"] = []
     temp_result["mean_surv_plot"] = []
     temp_result["total_pred_plot"] = []
+    temp_result["LT"] = LT
     ## JM Ende
 
     # JM Schleife für die Brier Scores
