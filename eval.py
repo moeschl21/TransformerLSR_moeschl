@@ -381,11 +381,14 @@ def main(args=None):
         total_pred.append(surv_pred) # JM Hier sind jetzt nach und nach aufsummiert die SURV-WKT drin (Integral immer von LT aus und nach und nach mit pt weiter)
 
         # JM Mean survival plot calculations
+        surv_pred = torch.zeros(_batch_size,0,1,device=device)
+        start_time = LT
+        
         for pt in pred_times_plot: 
             with torch.no_grad():
                 surv_out = model.predict_surv_marginal(batch,end_time=pt,start_time=start_time) # JM noch keine Surv-Wkt nur das Integral h(t) hier
             
-            surv_pred = torch.cat((surv_pred, surv_out.unsqueeze(-1)), dim=1)
+            surv_pred = torch.cat((surv_pred_plot, surv_out.unsqueeze(-1)), dim=1)
             start_time = pt
 
         surv_pred = surv_pred.squeeze().cpu().numpy().reshape(_batch_size,-1)
