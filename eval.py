@@ -181,6 +181,7 @@ def main(args=None):
     LT = np.quantile(train_data['time'], [0.1] )[0] # JM Landmark time
     # JM Zeitpunkte für die Surv Evaluation zwischen dem 10% und dem 90% Quantil (durch linspace)
     pred_times = np.quantile(train_data['time'].unique(), np.linspace(0.1,0.9,pred_window_length+1))[1:]
+    pred_times_plot = np.quantile(train_data['time'].unique(), np.linspace(0.1,0.9,100))[1:]
 
     # JM DEBUG
     print("LT:", LT)
@@ -257,9 +258,9 @@ def main(args=None):
     temp_result["visit_log_inten_list"] = []
     temp_result["visit_log_inten_truth"] = []
     temp_result["visit_times"] = []
-    temp_result["pred_times"] = []
-    temp_result["mean_surv"] = []
-    temp_result["total_pred"] = []
+    temp_result["pred_times_plot"] = []
+    temp_result["mean_surv_plot"] = []
+    temp_result["total_pred_plot"] = []
     ## JM Ende
 
     # JM Schleife für die Brier Scores
@@ -346,6 +347,7 @@ def main(args=None):
 
     # survival analysis // Brier Scores
     total_pred = []
+    total_pred_plot = []
     
     for batch in range(0, len(surv_id), batch_size):
         # JM Nur die Patienten die für die Analyse geeignet sind time > LT
@@ -377,14 +379,30 @@ def main(args=None):
         surv_pred = surv_pred.cumsum(axis=1) # JM SUmmieren kommulliert (also immer den wert drauf aber immer noch im Vektor)
         surv_pred = np.exp(-surv_pred) # JM Survival WKT jetzt
         total_pred.append(surv_pred) # JM Hier sind jetzt nach und nach aufsummiert die SURV-WKT drin (Integral immer von LT aus und nach und nach mit pt weiter)
-    
-    total_pred = np.concatenate(total_pred,axis=0)
 
-    # JM Berechnungen für die Mean Surv kurve
-    mean_surv = total_pred.mean(axis=0)
-    temp_result["pred_times"] = pred_times
-    temp_result["mean_surv"] = mean_surv
-    temp_result["total_pred"] = total_pred
+        # JM Mean survival plot calculations
+        for pt in pred_times_plot: 
+            with torch.no_grad():
+                surv_out = model.predict_surv_marginal(batch,end_time=pt,start_time=start_time) # JM noch keine Surv-Wkt nur das Integral h(t) hier
+            
+            surv_pred = torch.cat((surv_pred, surv_out.unsqueeze(-1)), dim=1)
+            start_time = pt
+
+        surv_pred = surv_pred.squeeze().cpu().numpy().reshape(_batch_size,-1)
+        surv_pred = surv_pred.cumsum(axis=1) # JM SUmmieren kommulliert (also immer den wert drauf aber immer noch im Vektor)
+        surv_pred = np.exp(-surv_pred) # JM Survival WKT jetzt
+        total_pred_plot.append(surv_pred) # JM Hier sind jetzt nach und nach aufsummiert die SURV-WKT drin (Integral immer von LT aus und nach und nach mit pt weiter)
+        # JM END
+
+    total_pred = np.concatenate(total_pred,axis=0)
+    total_pred_plot = np.concatenate(total_pred_plot,axis=0)
+
+    # JM Input the metrics to the return list
+    mean_surv_plot = total_pred_plot.mean(axis=0)
+    temp_result["pred_times_plot"] = pred_times_plot
+    temp_result["mean_surv_plot"] = mean_surv_plot
+    temp_result["total_pred_plot"] = total_pred_plot
+    # JM Input the metrics to the return list END
 
     # JM Brier Score für jede prediction Zeit
     bs= brier_fast(total_pred, tmp_batch["e"].numpy().reshape(len(surv_id)), tmp_batch["t"].numpy().reshape(len(surv_id)),
