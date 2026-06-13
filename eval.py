@@ -388,7 +388,7 @@ def main(args=None):
             with torch.no_grad():
                 surv_out = model.predict_surv_marginal(batch,end_time=pt,start_time=start_time) # JM noch keine Surv-Wkt nur das Integral h(t) hier
             
-            surv_pred = torch.cat((surv_pred_plot, surv_out.unsqueeze(-1)), dim=1)
+            surv_pred = torch.cat((surv_pred, surv_out.unsqueeze(-1)), dim=1)
             start_time = pt
 
         surv_pred = surv_pred.squeeze().cpu().numpy().reshape(_batch_size,-1)
