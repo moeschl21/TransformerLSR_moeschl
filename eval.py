@@ -181,7 +181,7 @@ def main(args=None):
     LT = np.quantile(train_data['time'], [0.1] )[0] # JM Landmark time
     # JM Zeitpunkte für die Surv Evaluation zwischen dem 10% und dem 90% Quantil (durch linspace)
     pred_times = np.quantile(train_data['time'].unique(), np.linspace(0.1,0.9,pred_window_length+1))[1:]
-    pred_times_plot = np.quantile(train_data['time'].unique(), np.linspace(0.1,0.9,100))[1:]
+    pred_times_plot = np.linspace(LT, 16000, 100)[1:]
 
     # JM DEBUG
     print("LT:", LT)
