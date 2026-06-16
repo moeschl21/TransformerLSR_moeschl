@@ -205,7 +205,10 @@ def get_mask(pad = None, future = True, window = None,period = None):
         if period is not None:
             periodic_mask = np.zeros((size,size)).astype('uint8')
             for row_index, row in enumerate(periodic_mask):
-                ind = (np.floor(row_index/period).astype('uint8')-1)*period
+                # JM Ersetzen des unteren. Da kommt Overflow zustande und das müsste die Maske dann kaputt machen. Ich bin mir aber nicht sicher ob die mit dem "Overflow" spielen.
+                ind = (row_index // period - 1) * period
+                #ind = (np.floor(row_index/period).astype('uint8')-1)*period # Das müsste Fehlerhaft sein
+                # JM End
                 row[0:ind+period] = 1
             periodic_mask = periodic_mask.reshape(1,size,size)==0
             future_mask = future_mask & periodic_mask
