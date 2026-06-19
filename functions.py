@@ -166,7 +166,7 @@ def init_weights(m):
 
 
 # JM Creates an attention mask für the encode decoder transition (Aus den visits werden dann die Masken gemacht auch für die long. Variablen 1 visit heißt ja 3 long V.)
-# JM src_period: How many Tokens on the Encoder side for one time? like longidutionale variables
+# JM src_period: How many Tokens on the Encoder side for one time per visit? like longidutionale variables
 # JM trg_period: How many Tokens for the target (mostly just one right?)
 def enc_dec_mask(batch_mask,src_period,trg_period):
     device = batch_mask.device
@@ -185,7 +185,11 @@ def enc_dec_mask(batch_mask,src_period,trg_period):
     trg_combined,src_combined = trg_length * trg_period, length * src_period
     mask = np.zeros([trg_combined,src_combined]).astype('uint8')
     for row_index, row in enumerate(mask):
-        ind = (np.floor(row_index/trg_period).astype('uint8'))*src_period
+        # JM Test for bug
+        max_ind = ((trg_combined - 1) // trg_period) * src_period
+        print("max_ind:", max_ind)
+        # JM Test for bug
+        ind = (np.floor(row_index/trg_period).astype('uint8'))*src_period # JM evtl. Bug
         row[0:ind+src_period] = 1
     
     mask = mask.reshape(1,trg_combined,src_combined)==1
