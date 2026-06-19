@@ -185,12 +185,9 @@ def enc_dec_mask(batch_mask,src_period,trg_period):
     trg_combined,src_combined = trg_length * trg_period, length * src_period
     mask = np.zeros([trg_combined,src_combined]).astype('uint8')
     
-    # JM Test for bug
-    max_ind = ((trg_combined - 1) // trg_period) * src_period
-    print("max_ind:", max_ind)
-    # JM Test for bug
     for row_index, row in enumerate(mask):
-        ind = (np.floor(row_index/trg_period).astype('uint8'))*src_period # JM evtl. Bug
+        ind = (row_index // trg_period) * src_period # JM My fix for overflow bug impacts masks
+        # ind = (np.floor(row_index/trg_period).astype('uint8'))*src_period # JM Again a bug...
         row[0:ind+src_period] = 1
     mask = mask.reshape(1,trg_combined,src_combined)==1
     stacked_mask = stacked_mask & mask
