@@ -130,7 +130,7 @@ class TransformerLSR(nn.Module):
         self.long_embeddings = clones(nn.Linear(1,d_model),d_long) # JM Each long. variable got their embedding
         self.base_embedding = nn.Linear(d_base,d_model)
 
-        # JM Building the Encoder Input ist 3*32 da alle in dim 32 eingebettet werden)
+        # JM Building the Encoder Input ist 3*32 da alle in dim 32 (32 ist default) eingebettet werden)
         self.encoder_layers = nn.ModuleList([Encoder_Layer(3*d_model,nhead,dropout,ffn_dim=ffn_dim)
                                              for _ in range(num_encoder_layers)])
         # use encoder structure for decoder (JM in decode they implemented the decoder stuff)
