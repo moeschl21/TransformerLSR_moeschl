@@ -54,4 +54,19 @@ def brier_fast(preds,events,times,kmf_c,LT,pred_times):
     G2 = np.repeat((kmf_c.predict(pred_times).to_numpy() / LT_factor).reshape(1,-1),repeats=batch_size,axis=0)
 
     B_score = np.mean((w1*preds**2/G1 + w2*(1-preds)**2/G2),axis=0)
+
+    # JM B_score muss ersetzt werden durch folgendes, wenn 0/0 fix kommt
+    #term1 = np.zeros_like(preds, dtype=np.float32)
+    #term2 = np.zeros_like(preds, dtype=np.float32)
+    #idx1 = w1 == 1
+    #idx2 = w2 == 1
+    #term1[idx1] = preds[idx1]**2 / G1[idx1]
+    #term2[idx2] = (1 - preds[idx2])**2 / G2[idx2]
+    #B_score = np.mean(term1 + term2, axis=0)
+    
     return B_score
+
+
+/*
+
+*/
