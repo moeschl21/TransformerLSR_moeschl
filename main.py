@@ -243,7 +243,7 @@ def main(args=None):
         logger.info(f"longloss:{loss1.item():.2f}")
         logger.info(f"survloss:{loss2.item():.2f}")
         logger.info(f"intenloss:{loss3.item():.2f}")
-        train_history.append(train_show)
+        train_history.append(train_show.detach().cpu().item())
 
         #train_values[seed,epoch] = train_show
 
@@ -317,7 +317,7 @@ def main(args=None):
 
 
         vali_show = (vali_loss/tokens)
-        vali_history.append(vali_show)
+        vali_history.append(vali_show.detach().cpu().item())
         logger.info(
             f"Epoch {epoch}: train loss = {train_show:.4f}, "
             f"validation loss = {vali_show:.4f}"
