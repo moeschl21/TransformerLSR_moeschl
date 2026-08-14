@@ -9,6 +9,7 @@ import random
 from TransformerLSR import TransformerLSR
 from functions import get_tensors
 from loss import (long_loss_LSR, surv_loss,inten_loss)
+import matplotlib.pyplot as plt
 
 
 # Other Python libraries
@@ -204,7 +205,9 @@ def main(args=None):
     batch_size = args.batch_size
     
     curr_best = 100000000
-
+    train_history = []
+    vali_history = []
+    
     for epoch in range(n_epoch):
         logger.info(f'epoch: {epoch}')
         #train loop
@@ -240,6 +243,7 @@ def main(args=None):
         logger.info(f"longloss:{loss1.item():.2f}")
         logger.info(f"survloss:{loss2.item():.2f}")
         logger.info(f"intenloss:{loss3.item():.2f}")
+        train_history.append(train_show)
 
         #train_values[seed,epoch] = train_show
 
@@ -313,6 +317,12 @@ def main(args=None):
 
 
         vali_show = (vali_loss/tokens)
+        vali_history.append(vali_show)
+        logger.info(
+            f"Epoch {epoch}: train loss = {train_show:.4f}, "
+            f"validation loss = {vali_show:.4f}"
+        )
+        
         #vali_values[seed,epoch] = vali_show
         if vali_show < curr_best:
             curr_best = vali_show
@@ -328,6 +338,18 @@ def main(args=None):
 
     # with open(info_path, 'wb') as f:
     #     pickle.dump(train_info,f)
+    plt.figure(figsize=(8, 5))
+    
+    plt.plot(range(1, n_epoch + 1), train_history, label="Training Loss")
+    plt.plot(range(1, n_epoch + 1), vali_history, label="Validation Loss")
+    
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Training and Validation Loss")
+    plt.legend()
+    plt.grid(True)
+    
+    plt.show()
 
     logger.info("training info saved, training completed")
 
