@@ -322,6 +322,23 @@ def main(args=None):
             f"Epoch {epoch}: train loss = {train_show:.4f}, "
             f"validation loss = {vali_show:.4f}"
         )
+
+        plt.figure(figsize=(8, 5))
+        
+        plt.plot(range(1, len(train_history) + 1),
+                 train_history,
+                 label="Training Loss")
+        
+        plt.plot(range(1, len(vali_history) + 1),
+                 vali_history,
+                 label="Validation Loss")
+        
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title("Training and Validation Loss")
+        plt.legend()
+        plt.grid(True)
+        plt.show()
         
         #vali_values[seed,epoch] = vali_show
         if vali_show < curr_best:
@@ -338,18 +355,6 @@ def main(args=None):
 
     # with open(info_path, 'wb') as f:
     #     pickle.dump(train_info,f)
-    plt.figure(figsize=(8, 5))
-    
-    plt.plot(range(1, n_epoch + 1), train_history, label="Training Loss")
-    plt.plot(range(1, n_epoch + 1), vali_history, label="Validation Loss")
-    
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Training and Validation Loss")
-    plt.legend()
-    plt.grid(True)
-    
-    plt.show()
 
     logger.info("training info saved, training completed")
 
