@@ -335,6 +335,7 @@ def main(args=None):
         
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
+        plt.ylim(0, 1)
         plt.title("Training and Validation Loss")
         plt.legend()
         plt.grid(True)
