@@ -121,7 +121,7 @@ class TransformerLSR(nn.Module):
                  dropout = 0.2,
                  num_exp = 500,
                  num_sample = 100, # JM Evtl für die Monte-Carlo sachen
-                 ffn_dim = 128,
+                 ffn_dim = 64,
                  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
         super().__init__()
 
