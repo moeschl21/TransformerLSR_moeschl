@@ -370,7 +370,7 @@ class TransformerLSR(nn.Module):
             dec_out = self.decode(memory,encDec_mask,trg_embeddings,trg_mask)
             x = dec_out.reshape(batch_size,trg_length,i,3*self.d_model).permute(0,2,1,3)
             long_i_ind = self.dag_order[i-1] # JM Holt den Index der auch der Reihenfolge entspricht vom vorhersagen
-            long_i_pred = self.long_p[long_i_ind](x[:,i-1]) # JM Last layer for prediction, gerade verstehe ich das so, dass immer alle Y1 von jedem visit vorhergesagt wird und dann geht es weiter zu visit2
+            long_i_pred = self.long_p[long_i_ind](x[:,i-1]) # JM Last layer for prediction, wenn man 2 token reingibt bspe [Y^1, Py2] mit P prediction token, dann bekommt man ja zwei outputs aber man will ja nur den output von Py2 behalten weil man ja das predicten will, also nimmt man das letzte.
             trg_long_list.append(long_i_pred) 
         for i in range(self.d_long):
             long_preds.append(trg_long_list[self.inv_order[i]])
