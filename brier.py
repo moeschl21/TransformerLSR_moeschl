@@ -66,8 +66,3 @@ def brier_fast(preds,events,times,kmf_c,LT,pred_times):
     B_score = np.mean(term1 + term2, axis=0)
     
     return B_score
-
-
-/*
-
-*/
