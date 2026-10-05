@@ -178,9 +178,24 @@ def main(args=None):
     # Dadurch kann es passieren, dass pred_times[0] < LT gilt und man evtl. dann Surv-WKT größer 1 bekommt! 
     # Weil dann das Integral dann Grenzen hat die das Vorzeichen drehen (gerade beim ersten Wert fällt das auf)
     
-    LT = np.quantile(train_data['time'], [0.1] )[0] # JM Landmark time
+    #LT = np.quantile(train_data['time'], [0.1] )[0] # JM Landmark time
     # JM Zeitpunkte für die Surv Evaluation zwischen dem 10% und dem 90% Quantil (durch linspace)
-    pred_times = np.quantile(train_data['time'].unique(), np.linspace(0.1,0.9,pred_window_length+1))[1:]
+    #pred_times = np.quantile(train_data['time'].unique(), np.linspace(0.1,0.9,pred_window_length+1))[1:]
+
+    #### Bug fix for LT time and pred times to be on the same scale
+    # JM Survival-Zeit pro Patient nur einmal verwenden
+    train_surv_times = train_data.drop_duplicates(subset="id")["time"]
+
+    # JM Landmark time = 10%-Quantil der Survival-Zeiten im Training
+    LT = np.quantile(train_surv_times, 0.1)
+
+    # JM Evaluationszeitpunkte zwischen 10%- und 90%-Quantil
+    pred_times = np.quantile(
+        train_surv_times,
+        np.linspace(0.1, 0.9, pred_window_length + 1)
+    )[1:]
+    ##### 
+    
     pred_times_plot = np.linspace(LT, 16000, 100)[1:]
 
     # JM DEBUG
