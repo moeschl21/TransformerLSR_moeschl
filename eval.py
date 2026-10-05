@@ -205,7 +205,9 @@ def main(args=None):
     # JM DEBUG
 
     # use all data for accurate censoring distribution JM Es werden alle Daten benutzt um die Zensierungsverteilung zu bekommen
-    train_batch = get_tensors(data.copy(),long=Y_str_list)
+    #train_batch = get_tensors(data.copy(),long=Y_str_list)
+    # JM Bug fix only use train data! 
+    train_batch = get_tensors(train_data.copy(),long=Y_str_list)
     train_e,train_t = train_batch["e"].numpy(), train_batch["t"].numpy() # JM train_e ist ob das Event stattgefunden hat und train_t ist dann die Event/Censoring Zeit
 
 
