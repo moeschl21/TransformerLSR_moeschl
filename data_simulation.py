@@ -88,7 +88,7 @@ class DIVAT_env:
         self.timeout = timeout
         self.eta_tox=50
         # JM Censoring rates 
-        self.censor_dist = stats.norm(loc=15000, scale=100)
+        self.censor_dist = stats.norm(loc=1000, scale=100)
         self.censortime = self.censor_dist.rvs(size=1)[0]
         self.max_visit = 1500 # JM WIe weit wird in die Zukunft nach den nächsten visit geschaut
         
