@@ -77,10 +77,10 @@ def main(args=None):
     # log meta-data
     logger.info(args)
     if not os.path.exists("./models"):
-        os.makedirs("./models")
+        os.makedirs("./models", exist_ok=True)
 
     if not os.path.exists("./models/info"):
-        os.makedirs("./models/info")
+        os.makedirs("./models/info", exist_ok=True)
     
     
     
