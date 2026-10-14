@@ -131,10 +131,14 @@ def initialise_env_at_last_visit(DIVAT_env, patient_info, last_row, data, timeou
     y1 = last_row.get("Y1", np.nan)
     if pd.isna(y1):
         y1 = get_last_available_value("Y1")
+    if pd.isna(y1):
+        y1 = env.mean_tl_init
 
     y2 = last_row.get("Y2", np.nan)
     if pd.isna(y2):
         y2 = get_last_available_value("Y2")
+    if pd.isna(y2):
+        y2 = env.mean_y_init
 
     y3 = last_row.get("Y3", np.nan)
     if pd.isna(y3):
