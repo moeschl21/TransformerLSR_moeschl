@@ -15,7 +15,6 @@ Example (from the Notebook):
 
 # Imports
 import argparse
-import copy
 import importlib.util
 import pickle
 import random
@@ -181,123 +180,76 @@ def sample_first_visit_conditional_on_no_visit_until_LT(env, current_dose, LT, m
         f"Could not sample a visit after LT={LT:.6f} in {max_tries} tries."
     )
 
-
-
-def fill_hazard_segment(env, dose, segment_left, segment_right, plot_times, cum_hazard, base_hazard):
-    """
-    Fill cumulative hazard values for plot_times in [segment_left, segment_right].
-    env.time must remain the visit time anchoring hazard_fun for this interval.
-    """
-    if segment_right <= segment_left:
-        return base_hazard
-
-    mask = (plot_times >= segment_left) & (plot_times <= segment_right)
-    idx = np.where(mask)[0]
-
-    for k in idx:
-        t = float(plot_times[k])
-        inc = env.cumulative_prob(t_upper=t, t_lower=segment_left, di=dose)
-        cum_hazard[k] = base_hazard + float(inc)
-
-    total_inc = env.cumulative_prob(
-        t_upper=float(segment_right),
-        t_lower=float(segment_left),
-        di=dose,
-    )
-    return base_hazard + float(total_inc)
-
-
 def simulate_one_oracle_path(
     DIVAT_env,
     patient_info,
     last_row,
+    data,
     LT,
-    plot_times,
+    horizon=16000.0,
     timeout=1000,
 ):
-    """
-    Simulate one future longitudinal/visit/treatment path and return the
-    conditional survival curve from LT onward, based on the true DGP hazard.
-
-    Death is not sampled. Survival is obtained as exp(- cumulative true hazard).
-    """
+    # Initialise patient at the last visit before LT
     env, current_dose = initialise_env_at_last_visit(
-        DIVAT_env, patient_info, last_row, timeout=timeout
+        DIVAT_env,
+        patient_info,
+        last_row,
+        data,
+        timeout=timeout,
     )
 
-    horizon = float(plot_times[-1])
-    cum_hazard = np.full(len(plot_times), np.nan, dtype=float)
-    base_hazard = 0.0
+    # Prediction horizon is the administrative end point
+    env.censortime = float(horizon)
 
-    # The known history tells us that no visit occurred before LT.
+    # Avoid stopping because of the original visit-count timeout
+    env.timeout = 10**9
+
+    # Draw first future visit conditional on no visit before LT
     next_visit = sample_first_visit_conditional_on_no_visit_until_LT(
-        env, current_dose, LT
-    )
-
-    # Initial interval: last observed visit -> first future visit.
-    # Survival is conditioned on being alive at LT, so integration starts at LT.
-    segment_left = float(LT)
-    segment_right = min(float(next_visit), horizon)
-
-    base_hazard = fill_hazard_segment(
         env,
         current_dose,
-        segment_left,
-        segment_right,
-        plot_times,
-        cum_hazard,
-        base_hazard,
+        LT,
     )
 
-    if next_visit >= horizon:
-        return np.exp(-cum_hazard)
+    # Never simulate beyond the prediction horizon
+    step_end = min(next_visit, horizon)
+    delta_t = step_end - env.time
 
-    # Arrive at the first future visit: generate fresh Y1/Y2 under the old dose.
-    env.update_long(current_dose, float(next_visit), update_obs=True)
-    env.tox = env.toxicity(float(next_visit), env.time, current_dose)
-    env.time = float(next_visit)
+    _, _, done, death, _, _ = env.step(
+        [current_dose, delta_t]
+    )
 
-    # Continue with the original DGP. At each visit a new dose is drawn from
-    # the newly generated current Y2, and then the next visit time is sampled.
-    safety_counter = 0
+    # Path incompatible with known survival beyond LT
+    if death and env.time <= LT:
+        return None
+
+    # Death after LT
+    if death:
+        return float(env.time)
+
+    # Survived to prediction horizon
+    if done or env.time >= horizon:
+        return np.inf
+
+    # Continue future simulation
     while env.time < horizon:
-        safety_counter += 1
-        if safety_counter > timeout + 10000:
-            raise RuntimeError("Safety stop: too many future visits.")
 
         new_dose, delta_t, _ = env.sample_treatment()
-        new_dose = float(new_dose)
-        next_visit = float(env.time + delta_t)
 
-        segment_left = float(env.time)
-        segment_right = min(next_visit, horizon)
+        # Do not simulate beyond horizon
+        delta_t = min(delta_t, horizon - env.time)
 
-        base_hazard = fill_hazard_segment(
-            env,
-            new_dose,
-            segment_left,
-            segment_right,
-            plot_times,
-            cum_hazard,
-            base_hazard,
+        _, _, done, death, _, _ = env.step(
+            [new_dose, delta_t]
         )
 
-        if next_visit >= horizon:
-            break
+        if death:
+            return float(env.time)
 
-        # Generate the longitudinal observation at the next visit.
-        env.update_long(new_dose, next_visit, update_obs=True)
-        env.tox = env.toxicity(next_visit, env.time, new_dose)
-        env.time = next_visit
-        current_dose = new_dose
+        if done or env.time >= horizon:
+            return np.inf
 
-    if np.isnan(cum_hazard).any():
-        missing_idx = np.where(np.isnan(cum_hazard))[0]
-        raise RuntimeError(
-            f"Some plot times were not filled: indices {missing_idx[:10].tolist()}"
-        )
-
-    return np.exp(-cum_hazard)
+    return np.inf
 
 
 def compute_oracle_survival(
@@ -352,20 +304,34 @@ def compute_oracle_survival(
         patient_seed = int(rng.integers(0, 2**31 - 1))
         np.random.seed(patient_seed)
         random.seed(patient_seed)
-
-        curves = np.empty((n_paths, len(plot_times)), dtype=float)
-
-        for m in range(n_paths):
-            curves[m, :] = simulate_one_oracle_path(
+        
+        death_times = []
+        
+        while len(death_times) < n_paths:
+        
+            death_time = simulate_one_oracle_path(
                 DIVAT_env=DIVAT_env,
                 patient_info=patient_info[pid],
                 last_row=last_row,
+                data=data,
                 LT=LT,
-                plot_times=plot_times,
+                horizon=horizon,
                 timeout=timeout,
             )
-
-        patient_curves[pid] = curves.mean(axis=0)
+        
+            # Path is incompatible with the known condition T > LT.
+            # Redraw the Monte Carlo path, not the patient.
+            if death_time is None:
+                continue
+        
+            death_times.append(death_time)
+        
+        death_times = np.asarray(death_times, dtype=float)
+        
+        patient_curves[pid] = np.array([
+            np.mean(death_times > t)
+            for t in plot_times
+        ])
 
     oracle_by_patient = np.vstack([patient_curves[int(pid)] for pid in eligible_ids])
     mean_oracle_surv = oracle_by_patient.mean(axis=0)
