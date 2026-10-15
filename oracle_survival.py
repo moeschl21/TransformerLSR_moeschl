@@ -88,7 +88,7 @@ def get_last_visit_before_landmark(data, patient_id, LT):
 
 
 # We initialise at last visit to draw MC samples for a sufficient ground truth 
-def initialise_env_at_last_visit(DIVAT_env, patient_info, last_row, data, timeout=1000):
+def initialise_env_at_last_visit(DIVAT_env, patient_info, last_row, timeout=1000):
     env = DIVAT_env(timeout=timeout)
 
     # Create starting point at the last visit before LT
@@ -108,47 +108,17 @@ def initialise_env_at_last_visit(DIVAT_env, patient_info, last_row, data, timeou
     )
 
     patient_id = int(last_row["id"])
-    t_last = float(last_row["obstime"])
-
-    # Helper: Get the last available value of a variable before or at the current visit
-    def get_last_available_value(variable):
-        values = (
-            data.loc[
-                (data["id"] == patient_id)
-                & (data["obstime"] <= t_last)
-                & (data[variable].notna()),
-                ["obstime", variable]
-            ]
-            .sort_values("obstime")
-        )
-
-        if len(values) == 0:
-            return np.nan
-
-        return values.iloc[-1][variable]
-
-    # Use value at last visit; if missing, use last available value (LOCF)
-    y1 = last_row.get("Y1", np.nan)
-    if pd.isna(y1):
-        y1 = get_last_available_value("Y1")
-    if pd.isna(y1):
-        y1 = env.mean_tl_init
-
-    y2 = last_row.get("Y2", np.nan)
-    if pd.isna(y2):
-        y2 = get_last_available_value("Y2")
-    if pd.isna(y2):
-        y2 = env.mean_y_init
-
-    y3 = last_row.get("Y3", np.nan)
-    if pd.isna(y3):
-        y3 = get_last_available_value("Y3")
-
-    # Check whether a value could be found for all variables
+    
+    # Oracle dataset is complete, so use the true simulated values
+    # at the last visit before LT directly.
+    y1 = last_row["Y1"]
+    y2 = last_row["Y2"]
+    y3 = last_row["Y3"]
+    
     if pd.isna(y1) or pd.isna(y2) or pd.isna(y3):
         raise ValueError(
-            f"Patient {patient_id}: no previous observed value available "
-            f"for Y1, Y2, or Y3."
+            f"Patient {patient_id}: unexpected missing value "
+            f"in complete oracle dataset."
         )
 
     # Restore longitudinal state
@@ -188,7 +158,6 @@ def simulate_one_oracle_path(
     DIVAT_env,
     patient_info,
     last_row,
-    data,
     LT,
     horizon=16000.0,
     timeout=1000,
@@ -198,7 +167,6 @@ def simulate_one_oracle_path(
         DIVAT_env,
         patient_info,
         last_row,
-        data,
         timeout=timeout,
     )
 
@@ -317,7 +285,6 @@ def compute_oracle_survival(
                 DIVAT_env=DIVAT_env,
                 patient_info=patient_info[pid],
                 last_row=last_row,
-                data=data,
                 LT=LT,
                 horizon=horizon,
                 timeout=timeout,
