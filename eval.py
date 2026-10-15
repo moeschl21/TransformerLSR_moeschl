@@ -279,6 +279,18 @@ def main(args=None):
     temp_result["mean_surv_plot"] = []
     temp_result["total_pred_plot"] = []
     temp_result["LT"] = LT
+    temp_result["long_times"] = []
+    
+    temp_result["Y1_pred"] = []
+    temp_result["Y1_truth"] = []
+    
+    temp_result["Y2_pred"] = []
+    temp_result["Y2_truth"] = []
+    
+    temp_result["Y3_pred"] = []
+    temp_result["Y3_truth"] = []
+    
+    temp_result["long_nan_mask"] = []
     ## JM Ende
 
     # JM Schleife für die Brier Scores
@@ -313,12 +325,31 @@ def main(args=None):
         y_target = y_target.cpu().numpy()
         combined_mask = combined_mask.cpu().numpy()
         nan_mask_copy = nan_mask.cpu().numpy()
+        
+        # JM copies for plotting
+        y_hat_plot = y_hat.copy()
+        y_target_plot = y_target.copy()
+        long_nan_mask = nan_mask.cpu().numpy().copy()
+        
         y_hat[nan_mask_copy] = 0.0 # JM Dort wo NaN oder kein echter Visit ist wollen wir ja keine Fehler messen (wie auch sinnvoll?)
         y_target[nan_mask_copy] = 0.0
         y_hat = minmax_scaler.inverse_transform(y_hat.reshape(_batch_size*length,long_dim)) # JM Auf die Originalskala zurück transformieren
         y_target = minmax_scaler.inverse_transform(y_target.reshape(_batch_size*length,long_dim))
         y_hat = y_hat.reshape(_batch_size,length,long_dim)
         y_target = y_target.reshape(_batch_size,length,long_dim)
+
+        # JM reshape
+        y_hat_plot = minmax_scaler.inverse_transform(
+            y_hat_plot.reshape(_batch_size*length, long_dim)
+        )
+        
+        y_target_plot = minmax_scaler.inverse_transform(
+            y_target_plot.reshape(_batch_size*length, long_dim)
+        )
+        
+        y_hat_plot = y_hat_plot.reshape(_batch_size, length, long_dim)
+        y_target_plot = y_target_plot.reshape(_batch_size, length, long_dim)
+
         
         for i in range(d_long): # JM Wir behalten nur gültige Werte
             y_hat_i = y_hat[:,:,i].reshape(-1)[combined_mask[:,:,i].reshape(-1) > 0]
@@ -339,6 +370,29 @@ def main(args=None):
             
             temp_result["visit_log_inten_truth"] =  np.log(batch_data["true_inten"].to_numpy()[:first_traj_len-1])
             temp_result["visit_times"] = batch["obstime"][0][1:first_traj_len].detach().cpu().numpy()
+
+            # Times after the second visit
+            long_times = (
+                batch["obstime"][0][1:first_traj_len]
+                .detach()
+                .cpu()
+                .numpy()
+            )
+            
+            temp_result["long_times"] = long_times
+        
+            temp_result["Y1_pred"] = y_hat_plot[0, :first_traj_len-1, 0]
+            temp_result["Y1_truth"] = y_target_plot[0, :first_traj_len-1, 0]
+            
+            temp_result["Y2_pred"] = y_hat_plot[0, :first_traj_len-1, 1]
+            temp_result["Y2_truth"] = y_target_plot[0, :first_traj_len-1, 1]
+            
+            temp_result["Y3_pred"] = y_hat_plot[0, :first_traj_len-1, 2]
+            temp_result["Y3_truth"] = y_target_plot[0, :first_traj_len-1, 2]
+
+            temp_result["long_nan_mask"] = (
+                long_nan_mask[0, :first_traj_len-1, :]
+            )
             
             first_run = False     
         ## JM Ende
