@@ -66,7 +66,8 @@ def get_split_and_landmark(data, train_frac=0.6, val_frac=0.2, lt_quantile=0.1):
 
     eligible_ids = test_subjects.loc[test_subjects["time"] > LT, "id"].to_numpy()
 
-    # Keep only subjects that actually have at least one recorded visit <= LT.
+    # Keep only subjects that actually have at least one recorded visit <= LT
+    # BTW actually always the case since first visit starts by 0
     eligible_ids = np.array(
         [
             pid for pid in eligible_ids
