@@ -350,7 +350,7 @@ def main(args=None):
         y_hat_plot = y_hat_plot.reshape(_batch_size, length, long_dim)
         y_target_plot = y_target_plot.reshape(_batch_size, length, long_dim)
 
-        
+        combined_mask[:, 0, :] = False # JM Test wir schmeißen die erste Pridiction mal raus 
         for i in range(d_long): # JM Wir behalten nur gültige Werte
             y_hat_i = y_hat[:,:,i].reshape(-1)[combined_mask[:,:,i].reshape(-1) > 0]
             y_target_i = y_target[:,:,i].reshape(-1)[combined_mask[:,:,i].reshape(-1) > 0]
